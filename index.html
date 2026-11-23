@@ -46,6 +46,10 @@
     <div id="sync" class="text-xs px-2 py-1 rounded-full" style="background:var(--panel);color:var(--muted)">offline</div>
   </header>
 
+  <div id="localWarn" class="hidden panel p-3 text-sm" style="border-color:#7c2d12;color:#fdba74">
+    <b>Friends can't see you yet.</b> Firebase isn't set up, so updates stay on this phone. Paste your Firebase config into the <code>FIREBASE_CONFIG</code> block in <code>index.html</code>, redeploy, and every phone must open the same updated page.
+  </div>
+
   <!-- 1. Identity & room -->
   <section class="panel p-4">
     <!-- Shown only until you join once -->
@@ -96,9 +100,20 @@
     <button id="bEnd" class="act" style="background:#2a1417;color:#fca5a5;border:1px solid #4a1d22">Got off<small>End your trip</small></button>
   </section>
 
+  <!-- Position tabs: where am I / what's next -->
+  <section class="panel p-4">
+    <div id="posTabs" class="seg flex gap-1 p-1 rounded-2xl" style="background:var(--bg)">
+      <button data-pm="at">I'm at…</button>
+      <button data-pm="next">Coming up next…</button>
+    </div>
+    <p id="posHint" class="text-sm mt-3 mb-1" style="color:var(--muted)"></p>
+    <div id="posList" style="max-height:280px;overflow:auto"></div>
+  </section>
+
   <!-- 4. Friends board -->
   <section>
-    <h2 class="text-lg font-bold mb-2">Friends in this room</h2>
+    <h2 class="text-lg font-bold mb-1">Friends in this room</h2>
+    <p id="roomInfo" class="text-xs mb-2" style="color:var(--muted)"></p>
     <div id="board" class="space-y-3"></div>
   </section>
 
@@ -151,7 +166,7 @@ for (const k in LINES){ const c=[0]; LINES[k].mins.forEach(m=>c.push(c[c.length-
 /* ---------------- State ---------------- */
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let S = { uid:null, name:'', room:'', line:'r7', dir:'up' };
+let S = { uid:null, name:'', room:'', line:'r7', dir:'up', pm:'at' };
 try { Object.assign(S, JSON.parse(localStorage.getItem('metroMates')||'{}')); } catch(e){}
 if(!S.uid){ S.uid='u'+Math.random().toString(36).slice(2,10); }
 let trip = null;       // my active trip {line,dir,idx,ts,offset}
@@ -220,7 +235,8 @@ function renderIdentity(){
   if(j){ $('jName').textContent=S.name; $('jRoom').textContent=S.room; }
 }
 function render(){
-  renderIdentity();
+  renderIdentity(); renderPos();
+  $('localWarn').classList.toggle('hidden', fbReady);
   document.body.style.setProperty('--accent', L().color);
   document.querySelectorAll('#lineSeg button').forEach(b=>b.classList.toggle('on',b.dataset.line===S.line));
   const st=L().stations;
@@ -236,7 +252,7 @@ function render(){
     const eta = nxt ? l.mins[Math.min(trip.idx,nextIdx)] : null;
     $('me').innerHTML = `<div class="flex items-center justify-between"><div>
       <div class="text-sm" style="color:var(--muted)">You're on ${esc(l.name)} · ${esc(dirLabel(trip.line,trip.dir))}</div>
-      <div class="display text-2xl font-extrabold mt-1">${esc(l.stations[trip.idx])}</div>
+      <div class="display text-2xl font-extrabold mt-1">${trip.mode==='next'?'Arriving at ':''}${esc(l.stations[trip.idx])}</div>
       <div class="text-sm mt-1" style="color:var(--muted)">${nxt?`Next: ${esc(nxt)} (~${eta} min)`:'Final station'} · updated ${fmtTime(trip.ts)}${trip.offset?` · shift ${trip.offset>0?'+':''}${trip.offset}`:''}</div>
     </div></div>`;
   } else {
@@ -251,6 +267,8 @@ function render(){
     rows.push({id,u});
   });
   rows.sort((a,b)=> (a.id===S.uid?-1:0)-(b.id===S.uid?-1:0) || b.u.updated-a.u.updated);
+  const all = Object.values(users), idle = all.filter(u=>!rows.some(r=>r.u===u)).map(u=>esc(u.name||'?'));
+  $('roomInfo').innerHTML = S.room ? `${all.length} in room · ${rows.length} riding` + (idle.length?` · Not riding: ${idle.join(', ')}`:'') : '';
   if(!S.room){ $('board').innerHTML = empty('Enter a room code and tap Join room to see friends here.'); return; }
   if(!rows.length){ $('board').innerHTML = empty('No one is riding yet. Share your room code with friends.'); return; }
   $('board').innerHTML = rows.map(({id,u})=>{
@@ -260,7 +278,7 @@ function render(){
     return `<div class="panel p-4" style="--accent:${l.color}">
       <div class="flex items-start justify-between gap-2">
         <div><div class="font-bold text-base">${esc(u.name)}</div>
-        <div class="display text-xl font-extrabold leading-tight mt-0.5">${esc(l.stations[u.idx])}</div></div>
+        <div class="display text-xl font-extrabold leading-tight mt-0.5">${u.mode==='next'?'Arriving at ':''}${esc(l.stations[u.idx])}</div></div>
         <span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>
       </div>
       <div class="track my-3"><i style="left:${pct}%"></i></div>
@@ -290,7 +308,7 @@ $('bBoard').onclick=()=>{
   openSheet(`Boarded at… (${L().name}, ${dirLabel(S.line,S.dir)})`,
     order.map(i=>`<button class="st" data-i="${i}"><span class="dot"></span>${esc(st[i])}</button>`).join(''));
   document.querySelectorAll('#sheetBody .st').forEach(b=>b.onclick=()=>{
-    trip={line:S.line,dir:S.dir,idx:+b.dataset.i,ts:Date.now(),offset:0};
+    trip={line:S.line,dir:S.dir,idx:+b.dataset.i,ts:Date.now(),offset:0,mode:'at'};
     save(); push(); closeSheet(); render(); toast('Checked in at '+st[+b.dataset.i]+' · '+fmtTime(trip.ts));
   });
 };
@@ -300,7 +318,7 @@ $('bNext').onclick=()=>{
   if(!trip){ toast('Tap “Boarded train” first'); return; }
   const n=trip.idx+(trip.dir==='up'?1:-1), st=LINES[trip.line].stations;
   if(n<0||n>=st.length){ toast('You are at the final station'); return; }
-  trip.idx=n; trip.ts=Date.now(); save(); push(); render(); toast('Now at '+st[n]);
+  trip.idx=n; trip.mode='at'; trip.ts=Date.now(); save(); push(); render(); toast('Now at '+st[n]);
 };
 
 $('bOff').onclick=()=>{
@@ -336,6 +354,29 @@ document.querySelectorAll('#lineSeg button').forEach(b=>b.onclick=()=>{ S.line=b
 document.querySelectorAll('#dirSeg button').forEach(b=>b.onclick=()=>{ S.dir=b.dataset.dir; save(); render(); });
 
 /* ---------------- Init ---------------- */
+/* ---------------- Position tabs: "I'm at" / "Coming up next" ---------------- */
+const posCtx = () => trip ? {line:trip.line,dir:trip.dir} : {line:S.line,dir:S.dir};
+function renderPos(){
+  const c=posCtx(), l=LINES[c.line];
+  document.querySelectorAll('#posTabs button').forEach(b=>b.classList.toggle('on',b.dataset.pm===S.pm));
+  let order=[...l.stations.keys()]; if(c.dir==='down') order.reverse();
+  if(S.pm==='next') order=order.slice(1);   // can't be approaching the starting station
+  $('posHint').textContent = (S.pm==='next'?'Which station is coming up next?':'Which station are you at?')+' · '+l.name+' '+dirLabel(c.line,c.dir).toLowerCase();
+  $('posList').innerHTML = order.map(i=>{
+    const cur = trip && trip.idx===i && (trip.mode||'at')===S.pm;
+    return `<button class="st" data-i="${i}"><span class="dot" style="${cur?'background:'+l.color:''}"></span>${esc(l.stations[i])}${cur?'<span class="ml-auto text-xs" style="color:var(--muted)">current</span>':''}</button>`;
+  }).join('');
+  document.querySelectorAll('#posList .st').forEach(b=>b.onclick=()=>setPos(+b.dataset.i));
+}
+function setPos(i){
+  if(needIdentity()) return;
+  const c=posCtx();
+  if(!trip) trip={line:c.line,dir:c.dir,idx:i,ts:Date.now(),offset:0,mode:S.pm};
+  else { trip.idx=i; trip.ts=Date.now(); trip.mode=S.pm; }
+  save(); push(); render(); toast((S.pm==='next'?'Coming up: ':'Now at ')+LINES[trip.line].stations[i]);
+}
+document.querySelectorAll('#posTabs button').forEach(b=>b.onclick=()=>{ S.pm=b.dataset.pm; save(); renderPos(); });
+
 /* Invite link: friends open it and join with one tap (or automatically if they've set a name before) */
 $('invite').onclick=async()=>{
   const url = location.origin + location.pathname + '?room=' + encodeURIComponent(S.room);
