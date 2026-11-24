@@ -3,142 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0e1116">
-<title>Metro Mates – Mumbai Metro friend tracker</title>
+<meta name="theme-color" content="#0b0e13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MetroSync</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- Firebase (compat SDK) -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
-  :root{--bg:#0e1116;--panel:#171c24;--line:#252c38;--text:#e8ecf2;--muted:#8a94a6;--ink:#0e1116}
-  html,body{background:var(--bg);color:var(--text);font-family:'Figtree',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-  h1,h2,.display{font-family:'Bricolage Grotesque','Figtree',sans-serif}
-  body{padding-bottom:env(safe-area-inset-bottom,0)}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px}
-  input,select{background:#0e1116;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:.7rem .8rem;width:100%;font-size:16px}
-  input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .act{min-height:92px;border-radius:20px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.15rem;line-height:1.1;text-align:left;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .08s}
-  .act:active{transform:scale(.96)}
-  .act small{font-family:'Figtree',sans-serif;font-weight:500;font-size:.75rem;opacity:.75}
-  .seg button{flex:1;padding:.65rem .4rem;border-radius:12px;font-weight:600;font-size:.9rem;color:var(--muted)}
-  .seg button.on{background:var(--accent);color:var(--ink)}
-  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:50}
-  .sheet.open{display:flex}
-  .sheet>div{background:var(--panel);width:100%;max-height:78vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0))}
-  .st{display:flex;align-items:center;gap:12px;width:100%;padding:.85rem .5rem;text-align:left;border-bottom:1px solid var(--line);font-size:1.05rem}
-  .dot{width:12px;height:12px;border-radius:99px;border:3px solid var(--accent);flex:none}
-  .track{height:6px;border-radius:9px;background:var(--line);position:relative}
-  .track i{position:absolute;top:-4px;width:14px;height:14px;border-radius:99px;background:var(--accent);transform:translateX(-50%);border:2px solid var(--bg)}
-  .badge{font-weight:700;font-size:.75rem;padding:.25rem .6rem;border-radius:99px;white-space:nowrap}
-  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#000;padding:.6rem 1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
-  #toast.show{opacity:1}
+:root{--bg:#0b0e13;--card:#141922;--card2:#1b212c;--line:#262e3b;--text:#eef1f6;--mut:#8a95a8;--accent:#ef4444;--ink:#0b0e13}
+html,body{background:var(--bg);color:var(--text);font-family:'Figtree',system-ui,sans-serif;margin:0;-webkit-tap-highlight-color:transparent}
+.d{font-family:'Bricolage Grotesque','Figtree',sans-serif;letter-spacing:-.02em}
+.wrap{max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px 130px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input{background:var(--bg);border:1px solid var(--line);border-radius:14px;color:var(--text);padding:.85rem 1rem;width:100%;font-size:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px}
+.mut{color:var(--mut)}
+.hero{border-radius:28px;padding:20px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 60%),var(--card)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .65rem;border-radius:99px;background:rgba(255,255,255,.08)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.act{height:96px;border-radius:24px;padding:14px 16px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;transition:transform .08s}
+.act:active{transform:scale(.95)}
+.act b{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.2rem;line-height:1.05}
+.act span{font-size:.75rem;opacity:.75}
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--bg)}
+.seg button{flex:1;padding:.7rem .3rem;border-radius:12px;font-weight:600;font-size:.88rem;color:var(--mut)}
+.seg button.on{background:var(--c,var(--accent));color:var(--ink)}
+.st{display:flex;align-items:center;gap:14px;width:100%;padding:.9rem .4rem;border-bottom:1px solid var(--line);text-align:left;font-size:1.05rem}
+.st .dot{width:14px;height:14px;border-radius:99px;border:3px solid var(--accent);flex:none}
+.st.cur .dot{background:var(--accent)}
+.tag{font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:99px;background:var(--card2);color:var(--mut);white-space:nowrap}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:flex-end;z-index:50}
+.sheet.open{display:flex}
+.sheet>div{background:var(--card);width:100%;max-width:480px;margin:0 auto;max-height:82vh;overflow:auto;border-radius:28px 28px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
+.grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 14px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(11,14,19,.88);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom))}
+nav>div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+nav button{padding:.7rem 0;border-radius:16px;font-weight:700;font-size:.85rem;color:var(--mut);position:relative}
+nav button.on{background:var(--card2);color:var(--text)}
+nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;background:var(--accent);color:var(--ink);border-radius:99px;padding:0 .4rem}
+.fr{display:flex;gap:12px;align-items:center;padding:14px}
+.av{width:44px;height:44px;border-radius:99px;display:grid;place-items:center;font-weight:800;color:var(--ink);flex:none;font-family:'Bricolage Grotesque',sans-serif}
+.badge{font-weight:700;font-size:.72rem;padding:.3rem .65rem;border-radius:99px;white-space:nowrap}
+.rail{height:6px;border-radius:9px;background:var(--line);position:relative;margin:14px 6px 6px}
+.rail i{position:absolute;top:-5px;width:16px;height:16px;border-radius:99px;background:var(--accent);transform:translateX(-50%);border:3px solid var(--card);transition:left 1s linear}
+/* map */
+#mapBox{position:relative}
+.mrow{height:56px;display:flex;align-items:center;position:relative}
+.mrow .nm{position:absolute;left:196px;font-size:.95rem;font-weight:600}
+.mrow .tg{position:absolute;left:196px;top:34px;font-size:.62rem;color:var(--mut)}
+.mrow .sd{position:absolute;left:123px;width:14px;height:14px;border-radius:99px;background:var(--bg);border:3px solid var(--mc)}
+.mrail{position:absolute;left:127px;width:6px;top:28px;bottom:28px;background:var(--mc);border-radius:9px;opacity:.85}
+.mk{position:absolute;width:32px;height:32px;border-radius:99px;display:grid;place-items:center;font-weight:800;font-size:.8rem;color:var(--ink);transition:top 1s linear;border:2px solid var(--card);z-index:5}
+.mk.me{box-shadow:0 0 0 3px #fff}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#000;padding:.65rem 1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;display:flex;gap:12px;align-items:center;white-space:nowrap}
+#toast.show{opacity:1;pointer-events:auto}
+#toast button{font-weight:800;color:#2563eb}
+#onb{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;align-items:center}
+#onb.open{display:flex}
 </style>
 </head>
-<body style="--accent:#ef4444">
-<div class="max-w-md mx-auto px-4 pt-5 pb-10 space-y-4">
-
-  <header class="flex items-end justify-between">
-    <div>
-      <h1 class="text-2xl font-extrabold leading-none">Metro Mates</h1>
-      <p class="text-sm mt-1" style="color:var(--muted)">Who's on which train, right now</p>
-    </div>
-    <div id="sync" class="text-xs px-2 py-1 rounded-full" style="background:var(--panel);color:var(--muted)">offline</div>
+<body>
+<div class="wrap">
+  <header class="flex items-center justify-between mb-4">
+    <h1 class="d text-2xl font-extrabold">Metro<span style="color:var(--accent)">Sync</span></h1>
+    <button id="roomChip" class="card px-3 py-2 text-sm flex items-center gap-2">
+      <span id="sdot" style="width:9px;height:9px;border-radius:9px;background:#8a95a8"></span>
+      <span id="roomTxt" class="font-semibold"></span>
+    </button>
   </header>
+  <div id="warn" class="hidden card p-3 text-sm mb-4" style="border-color:#7c2d12;color:#fdba74"><b>Not syncing.</b> <span id="warnT"></span></div>
 
-  <div id="localWarn" class="hidden panel p-3 text-sm" style="border-color:#7c2d12;color:#fdba74">
-    <b>Friends can't see you yet.</b> Firebase isn't set up, so updates stay on this phone. Paste your Firebase config into the <code>FIREBASE_CONFIG</code> block in <code>index.html</code>, redeploy, and every phone must open the same updated page.
-  </div>
+  <!-- RIDE -->
+  <section id="v-ride" class="space-y-4">
+    <div id="hero" class="hero"></div>
+    <div class="grid2">
+      <button id="bBoard" class="act" style="background:#22c55e;color:#04210f"><b>Boarded train</b><span>Pick line, direction, station</span></button>
+      <button id="bNext" class="act" style="background:var(--accent);color:var(--ink)"><b>Next station</b><span>Move one stop along</span></button>
+      <button id="bOff" class="act card" style="border-radius:24px"><b>Train ahead / behind</b><span class="mut">Fix your schedule shift</span></button>
+      <button id="bEnd" class="act" style="background:#2a1417;color:#fca5a5;border:1px solid #4a1d22"><b>Got off</b><span>End your trip</span></button>
+    </div>
+    <button id="bPos" class="card w-full p-4 flex items-center justify-between text-left">
+      <div><div class="font-bold">Set exact location</div><div class="text-sm mut">I'm at a station / coming up next</div></div>
+      <span class="mut text-xl">›</span>
+    </button>
+    <p class="text-xs text-center mut px-4">Positions between taps are estimated from schedule times (~2–3 min per stop, a train every ~<span id="hw"></span> min). Tap “Next station” at each stop to keep it accurate.</p>
+  </section>
 
-  <!-- 1. Identity & room -->
-  <section class="panel p-4">
-    <!-- Shown only until you join once -->
-    <div id="setup">
-      <p class="text-sm mb-3" style="color:var(--muted)">One-time setup. You'll stay in this room every time you open the app.</p>
-      <div class="grid grid-cols-2 gap-3">
-        <label class="text-sm" style="color:var(--muted)">Your name
-          <input id="name" maxlength="16" placeholder="e.g. Riya" autocomplete="off" class="mt-1">
-        </label>
-        <label class="text-sm" style="color:var(--muted)">Room code
-          <input id="room" maxlength="20" placeholder="e.g. office7" autocomplete="off" autocapitalize="none" class="mt-1">
-        </label>
-      </div>
-      <button id="join" class="w-full mt-3 py-3 rounded-xl font-bold" style="background:var(--text);color:var(--ink)">Join room</button>
-    </div>
-    <!-- Shown once joined -->
-    <div id="joined" class="hidden flex items-center justify-between gap-2">
-      <div class="min-w-0">
-        <div class="font-bold truncate" id="jName"></div>
-        <div class="text-sm truncate" style="color:var(--muted)">Room: <span id="jRoom"></span></div>
-      </div>
-      <div class="flex gap-2 flex-none">
-        <button id="invite" class="px-3 py-2 rounded-xl text-sm font-semibold" style="background:var(--text);color:var(--ink)">Invite</button>
-        <button id="leave" class="px-3 py-2 rounded-xl text-sm font-semibold" style="background:var(--bg);border:1px solid var(--line)">Switch</button>
-      </div>
-    </div>
-
-  <!-- 2. Line & direction -->
-  <section class="panel p-4 space-y-3">
-    <div class="seg flex gap-1 p-1 rounded-2xl" style="background:var(--bg)" id="lineSeg">
-      <button data-line="r7">Red Line 7</button>
-      <button data-line="y2a">Yellow Line 2A</button>
-    </div>
-    <div class="seg flex gap-1 p-1 rounded-2xl" style="background:var(--bg)" id="dirSeg">
-      <button data-dir="up"></button>
-      <button data-dir="down"></button>
+  <!-- MAP -->
+  <section id="v-map" class="hidden">
+    <div class="seg mb-3" id="mapSeg"></div>
+    <div id="legend" class="flex flex-wrap gap-2 mb-3"></div>
+    <div class="card p-3 overflow-hidden">
+      <div class="flex text-xs mut font-semibold" style="padding-left:78px"><span style="width:68px">↑ <span id="mUp"></span></span><span style="margin-left:6px">↓ <span id="mDn"></span></span></div>
+      <div id="mapBox" class="mt-2"></div>
     </div>
   </section>
 
-  <!-- Current status -->
-  <section id="me" class="panel p-4"></section>
-
-  <!-- 3. Actions -->
-  <section class="grid grid-cols-2 gap-3">
-    <button id="bBoard" class="act" style="background:#22c55e;color:#04210f">Boarded train<small>Pick station, stamps time</small></button>
-    <button id="bNext" class="act" style="background:var(--accent);color:var(--ink)">Next station<small>Move one stop along</small></button>
-    <button id="bOff" class="act" style="background:var(--panel);border:1px solid var(--line)">Train ahead / behind<small>Adjust your schedule shift</small></button>
-    <button id="bEnd" class="act" style="background:#2a1417;color:#fca5a5;border:1px solid #4a1d22">Got off<small>End your trip</small></button>
-  </section>
-
-  <!-- Position tabs: where am I / what's next -->
-  <section class="panel p-4">
-    <div id="posTabs" class="seg flex gap-1 p-1 rounded-2xl" style="background:var(--bg)">
-      <button data-pm="at">I'm at…</button>
-      <button data-pm="next">Coming up next…</button>
-    </div>
-    <p id="posHint" class="text-sm mt-3 mb-1" style="color:var(--muted)"></p>
-    <div id="posList" style="max-height:280px;overflow:auto"></div>
-  </section>
-
-  <!-- 4. Friends board -->
-  <section>
-    <h2 class="text-lg font-bold mb-1">Friends in this room</h2>
-    <p id="roomInfo" class="text-xs mb-2" style="color:var(--muted)"></p>
+  <!-- FRIENDS -->
+  <section id="v-friends" class="hidden">
+    <h2 class="d text-xl font-extrabold mb-1">Riding now</h2>
+    <p id="roomInfo" class="text-xs mut mb-3"></p>
     <div id="board" class="space-y-3"></div>
   </section>
-
-  <p class="text-xs text-center" style="color:var(--muted)">Transit times are approximate (about 2–3 min per stop, a train every ~<span id="hw"></span> min). Always follow official announcements.</p>
 </div>
 
-<!-- Bottom sheet -->
-<div id="sheet" class="sheet"><div><h2 id="sheetTitle" class="text-lg font-bold mb-2"></h2><div id="sheetBody"></div>
-  <button id="sheetClose" class="w-full mt-3 py-3 rounded-xl" style="background:var(--bg);border:1px solid var(--line)">Close</button></div></div>
+<nav><div>
+  <button data-v="ride" class="on">Ride</button>
+  <button data-v="map">Live map</button>
+  <button data-v="friends">Friends<em id="cnt" class="hidden"></em></button>
+</div></nav>
+
+<div id="sh" class="sheet"><div><div class="grab"></div><h2 id="shT" class="d text-xl font-extrabold mb-3"></h2><div id="shB"></div>
+  <button id="shX" class="w-full mt-4 py-3 rounded-2xl card font-semibold">Close</button></div></div>
+
+<div id="onb"><div class="wrap w-full" style="padding-bottom:40px">
+  <h1 class="d text-4xl font-extrabold">Metro<span style="color:var(--accent)">Sync</span></h1>
+  <p class="mut mt-2 mb-8">See which train your friends are on, live. One-time setup, you'll stay signed in.</p>
+  <label class="text-sm mut">Your name<input id="name" maxlength="16" placeholder="e.g. Riya" autocomplete="off" class="mt-1"></label>
+  <label class="text-sm mut block mt-4">Room code<input id="room" maxlength="24" placeholder="Share the same code with friends" autocomplete="off" autocapitalize="none" class="mt-1"></label>
+  <button id="go" class="w-full mt-6 py-4 rounded-2xl font-extrabold text-lg" style="background:var(--text);color:var(--ink)">Start</button>
+  <button id="onbX" class="w-full mt-2 py-3 mut hidden">Cancel</button>
+</div></div>
 <div id="toast"></div>
 
 <script>
 /* =====================================================================
-   FIREBASE SETUP  (do this once, takes ~3 minutes)
-   1. Go to https://console.firebase.google.com → Add project.
-   2. Build → Realtime Database → Create database (choose a region,
-      start in TEST mode so friends can read/write without login).
-   3. Project settings (gear icon) → Your apps → Web (</>) → register app.
-   4. Copy the firebaseConfig values it shows and paste them below.
-   5. Make sure databaseURL is included (looks like
-      https://YOUR-PROJECT-default-rtdb.firebaseio.com).
-   If you leave the placeholders, the app runs in local-only mode
-   (works across tabs on one device, but not across phones).
+   FIREBASE CONFIG (already filled with your project's values).
+   If sync fails, re-copy these from Firebase → Project settings → Your apps.
+   The database also needs rules that allow reads/writes on "rooms".
    ===================================================================== */
-
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDpZ8q-GNMWfHFZeOEFhXgXES63P5hfEcQ",
   authDomain: "metrosync-ff7e2.firebaseapp.com",
@@ -149,265 +144,235 @@ const FIREBASE_CONFIG = {
   appId: "1:51903285659:web:113e7defed8ef6a322393e"
 };
 
-/* ---------------- Station & transit data ----------------
-   mins[i] = approx minutes between station i and i+1. Tweak freely.
-   "up" = toward the LAST station, "down" = toward the FIRST. */
-const HEADWAY = 8;       // typical minutes between trains
-const STALE_MIN = 45;    // hide friends not updated for this long
-const LINES = {
-  r7: { name:'Red Line 7', color:'#ef4444',
-    stations:['Dahisar East','Ovaripada','National Park','Devipada','Magathane','Poisar','Akurli','Kurar','Dindoshi','Aarey','Goregaon East','Jogeshwari East','Mogra','Gundavali'],
-    mins:[3,2,3,2,2,3,2,2,3,2,3,2,2] },
-  y2a:{ name:'Yellow Line 2A', color:'#facc15',
-    stations:['Dahisar East','Anand Nagar','Kandarpada','Mandapeshwar','Eksar','Borivali West','Pahadi Eksar','Kandivali West','Dahanukarwadi','Valnai','Malad West','Lower Malad','Pahadi Goregaon','Goregaon West','Oshiwara','Lower Oshiwara','Andheri West'],
-    mins:[2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2] }
+/* ---------- Data ("up" = toward LAST station, "down" = toward FIRST) ---------- */
+const HEADWAY=8, STALE_MIN=45, DWELL=0.4, ROW=56;
+const LINES={
+ r7:{name:'Red Line 7',color:'#ef4444',
+  stations:['Kashigaon','Miragaon','Pandurangwadi','Dahisar East','Ovaripada','National Park','Devipada','Magathane','Poisar','Akurli','Kurar','Dindoshi','Aarey','Goregaon East','Jogeshwari East','Mogra','Gundavali'],
+  mins:[2,3,3, 3,2,3,2,2,3,2,2,3,2,3,2,2],
+  x:{3:'Line 2A · Line 9',16:'Line 1'}},
+ y2a:{name:'Yellow Line 2A',color:'#facc15',
+  stations:['Dahisar East','Anand Nagar','Kandarpada','Mandapeshwar','Eksar','Borivali West','Pahadi Eksar','Kandivali West','Dahanukarwadi','Valnai','Malad West','Lower Malad','Pahadi Goregaon','Goregaon West','Oshiwara','Lower Oshiwara','Andheri West'],
+  mins:[2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2],
+  x:{0:'Line 7 · Line 9',16:'Line 1'}}
 };
-for (const k in LINES){ const c=[0]; LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m)); LINES[k].cum=c; }
+for(const k in LINES){const c=[0];LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m));LINES[k].cum=c;}
 
-/* ---------------- State ---------------- */
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let S = { uid:null, name:'', room:'', line:'r7', dir:'up', pm:'at' };
-try { Object.assign(S, JSON.parse(localStorage.getItem('metroMates')||'{}')); } catch(e){}
-if(!S.uid){ S.uid='u'+Math.random().toString(36).slice(2,10); }
-let trip = null;       // my active trip {line,dir,idx,ts,offset}
-let users = {};        // everyone in the room
-let db=null, ref=null, joined=false;
+/* ---------- Helpers & state ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const vib=()=>{try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}};
+const dirName=(ln,d)=>{const s=LINES[ln].stations;return d==='up'?s[s.length-1]:s[0]};
+const fmtT=ts=>new Date(ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+const ago=ts=>{const m=Math.max(0,Math.round((Date.now()-ts)/60000));return m<1?'just now':m<60?m+' min ago':Math.floor(m/60)+'h ago'};
+const hue=n=>{let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return `hsl(${h} 75% 62%)`};
+const ld=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 
-const save = () => { try{ localStorage.setItem('metroMates', JSON.stringify(S)); localStorage.setItem('metroMatesTrip', JSON.stringify(trip)); }catch(e){} };
-try { trip = JSON.parse(localStorage.getItem('metroMatesTrip')||'null'); } catch(e){}
+let S=Object.assign({uid:null,name:'',room:'',line:'r7',dir:'up',pm:'at',mapLine:'r7'},ld('metroSync')||{});
+if(!S.uid){const o=ld('metroMates')||{};S.uid=o.uid||'u'+Math.random().toString(36).slice(2,10);if(!S.name){S.name=o.name||'';S.room=o.room||''}}  // migrate from old app
+let trip=ld('metroSyncTrip');
+if(trip&&Date.now()-trip.ts>STALE_MIN*60000)trip=null;
+let users={},db=null,ref=null,view='ride',markers={},tickN=0,mapScrolled=false,lastTrip=null;
+const persist=()=>{sv('metroSync',S);sv('metroSyncTrip',trip)};
 
-function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),1800); }
-const L = () => LINES[S.line];
-const dirLabel = (line,dir) => { const s=LINES[line].stations; return 'Toward ' + (dir==='up'? s[s.length-1] : s[0]); };
-const fmtTime = ts => new Date(ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-const ago = ts => { const m=Math.max(0,Math.round((Date.now()-ts)/60000)); return m<1?'just now': m<60? m+' min ago' : Math.floor(m/60)+'h ago'; };
-
-/* Minutes a train in this direction has travelled from its starting terminal */
-const travelled = (line,dir,idx) => { const c=LINES[line].cum; return dir==='up'? c[idx] : c[c.length-1]-c[idx]; };
-/* Estimated departure time of this person's train from its origin terminal.
-   Manual offset: +1 = "my train is 1 ahead" (left earlier), -1 = 1 behind. */
-const originTime = u => u.ts - travelled(u.line,u.dir,u.idx)*60000 - (u.offset||0)*HEADWAY*60000;
-
-function offsetBadge(f){
-  if(!trip) return ['Start a trip to compare','#252c38','#8a94a6'];
-  if(f.line!==trip.line || f.dir!==trip.dir) return [f.line!==trip.line?'Other line':'Opposite direction','#252c38','#8a94a6'];
-  const n = Math.round((originTime(f)-originTime(trip))/(HEADWAY*60000));
-  if(n===0) return ['Same train','#14532d','#86efac'];
-  if(n<0)   return [`${-n} train${-n>1?'s':''} ahead`,'#1e3a8a','#93c5fd'];
-  return [`${n} train${n>1?'s':''} behind`,'#78350f','#fcd34d'];
+/* ---------- Live position estimate (dead reckoning from schedule) ---------- */
+function live(u,now=Date.now()){
+  const l=LINES[u.line],c=l.cum,n=c.length,tot=c[n-1],sg=u.dir==='up'?1:-1;
+  const el=(now-u.ts)/60000,dw=u.mode==='next'?0:DWELL;
+  let m=c[u.idx]-(u.mode==='next'?sg*0.6:0)+sg*Math.max(0,el-dw);
+  m=Math.min(tot,Math.max(0,m));
+  if(sg>0?m>=tot:m<=0){const i=sg>0?n-1:0;return{f:i,at:true,term:true,idx:i}}
+  if(u.mode!=='next'&&el<dw)return{f:u.idx,at:true,idx:u.idx};
+  let i=0;while(i<n-2&&c[i+1]<=m)i++;
+  return{f:i+(m-c[i])/(c[i+1]-c[i]),prev:sg>0?i:i+1,next:sg>0?i+1:i,secs:(sg>0?c[i+1]-m:m-c[i])*60};
+}
+const liveText=(u,li)=>{const s=LINES[u.line].stations;return li.term?'Reached '+s[li.idx]:li.at?'At '+s[li.idx]:s[li.prev]+' → '+s[li.next]};
+const eta=s=>s<15?'Arriving':`~${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+const originTime=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*HEADWAY*60000;
+function compare(f){
+  if(!trip)return['Start a trip to compare','#262e3b','#8a95a8'];
+  if(f.line!==trip.line||f.dir!==trip.dir)return[f.line!==trip.line?'Other line':'Opposite way','#262e3b','#8a95a8'];
+  const n=Math.round((originTime(f)-originTime(trip))/(HEADWAY*60000));
+  return n===0?['Same train','#14532d','#86efac']:n<0?[`${-n} train${-n>1?'s':''} ahead`,'#1e3a8a','#93c5fd']:[`${n} train${n>1?'s':''} behind`,'#78350f','#fcd34d'];
 }
 
-/* ---------------- Sync layer (Firebase or local fallback) ---------------- */
-const fbReady = !FIREBASE_CONFIG.apiKey.startsWith('PASTE') && !FIREBASE_CONFIG.databaseURL.startsWith('PASTE');
-function setSync(t,ok){ const e=$('sync'); e.textContent=t; e.style.color=ok?'#86efac':'#8a94a6'; }
-
+/* ---------- Sync (Firebase, with local fallback) ---------- */
+const fbReady=!/PASTE/.test(FIREBASE_CONFIG.apiKey+FIREBASE_CONFIG.databaseURL);
+function status(t,c){$('sdot').style.background=c;$('sdot').title=t;const w=$('warn');w.classList.toggle('hidden',c==='#22c55e'||c==='#8a95a8'&&fbReady);$('warnT').textContent=fbReady?t+'. Check your Firebase rules allow reads/writes on "rooms".':'Firebase keys are missing, so updates stay on this phone.'}
+const roomPath=()=>'rooms/'+S.room.toLowerCase().replace(/[^a-z0-9_-]/g,'');
 function connect(){
-  if(ref && ref.off) ref.off();
-  if(!S.room){ users={}; render(); return; }
-  const path = 'rooms/'+S.room.toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  try{ref&&ref.off&&ref.off();db&&db.ref('.info/connected').off()}catch(e){}
+  users={};ref=null;if(!S.room){render();return}
   if(fbReady){
     try{
-      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-      db = firebase.database();
-      ref = db.ref(path+'/users');
-      ref.on('value', s=>{ users=s.val()||{}; render(); }, e=>{ setSync('sync error',false); });
-      db.ref('.info/connected').on('value', s=>setSync(s.val()?'live':'reconnecting…', s.val()));
-    }catch(e){ setSync('config error',false); }
-  } else {
-    const key='mm_local_'+path;
-    const read=()=>{ try{ users=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){ users={}; } render(); };
-    ref={ off(){ window.removeEventListener('storage',read); }, key };
-    window.addEventListener('storage',read); read(); setSync('local only',false);
+      if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+      db=firebase.database();ref=db.ref(roomPath()+'/users');
+      ref.on('value',s=>{users=s.val()||{};render()},()=>status('Permission denied','#ef4444'));
+      db.ref('.info/connected').on('value',s=>status(s.val()?'Live':'Reconnecting','#'+(s.val()?'22c55e':'facc15')));
+    }catch(e){status('Config error','#ef4444')}
+  }else{
+    const key='ms_local_'+roomPath(),rd=()=>{users=ld(key)||{};render()};
+    ref={off(){removeEventListener('storage',rd)},key};addEventListener('storage',rd);rd();status('Local only','#8a95a8');
   }
 }
 function push(){
-  if(!S.room||!S.name) return;
-  const rec = trip ? {name:S.name,...trip,active:true,updated:Date.now()} : {name:S.name,active:false,updated:Date.now()};
-  if(fbReady && ref && ref.child){ ref.child(S.uid).set(rec).catch(()=>setSync('write failed',false)); }
-  else if(ref && ref.key){ users[S.uid]=rec; localStorage.setItem(ref.key,JSON.stringify(users)); render(); }
+  if(!S.room||!S.name)return;
+  const rec=trip?{v:2,name:S.name,...trip,active:true,updated:Date.now()}:{v:2,name:S.name,active:false,updated:Date.now()};
+  if(fbReady&&ref&&ref.child)ref.child(S.uid).set(rec).catch(()=>status('Write failed','#ef4444'));
+  else if(ref&&ref.key){users[S.uid]=rec;sv(ref.key,users);render()}
 }
 
-/* ---------------- Rendering ---------------- */
-function renderIdentity(){
-  const j = !!(S.name && S.room);
-  $('setup').classList.toggle('hidden', j);
-  $('joined').classList.toggle('hidden', !j);
-  if(j){ $('jName').textContent=S.name; $('jRoom').textContent=S.room; }
-}
+/* ---------- Rendering ---------- */
+function riders(){const now=Date.now();return Object.entries(users).filter(([id,u])=>u&&u.v===2&&u.active&&LINES[u.line]&&now-u.updated<STALE_MIN*60000).map(([id,u])=>({id,u})).sort((a,b)=>(a.id===S.uid?-1:b.id===S.uid?1:0)||b.u.updated-a.u.updated)}
 function render(){
-  renderIdentity(); renderPos();
-  $('localWarn').classList.toggle('hidden', fbReady);
-  document.body.style.setProperty('--accent', L().color);
-  document.querySelectorAll('#lineSeg button').forEach(b=>b.classList.toggle('on',b.dataset.line===S.line));
-  const st=L().stations;
-  document.querySelectorAll('#dirSeg button').forEach(b=>{
-    b.classList.toggle('on',b.dataset.dir===S.dir);
-    b.textContent = dirLabel(S.line,b.dataset.dir).replace('Toward ','→ ');
-  });
-
-  // my status
-  if(trip){
-    const nextIdx = trip.idx + (trip.dir==='up'?1:-1);
-    const nxt = st[nextIdx]; const l=LINES[trip.line];
-    const eta = nxt ? l.mins[Math.min(trip.idx,nextIdx)] : null;
-    $('me').innerHTML = `<div class="flex items-center justify-between"><div>
-      <div class="text-sm" style="color:var(--muted)">You're on ${esc(l.name)} · ${esc(dirLabel(trip.line,trip.dir))}</div>
-      <div class="display text-2xl font-extrabold mt-1">${trip.mode==='next'?'Arriving at ':''}${esc(l.stations[trip.idx])}</div>
-      <div class="text-sm mt-1" style="color:var(--muted)">${nxt?`Next: ${esc(nxt)} (~${eta} min)`:'Final station'} · updated ${fmtTime(trip.ts)}${trip.offset?` · shift ${trip.offset>0?'+':''}${trip.offset}`:''}</div>
-    </div></div>`;
-  } else {
-    $('me').innerHTML = `<div class="text-sm" style="color:var(--muted)">Not on a train</div><div class="display text-lg font-bold mt-1">Tap “Boarded train” when you get on</div>`;
-  }
-
-  // friends board
-  const now=Date.now(); const rows=[];
-  Object.entries(users).forEach(([id,u])=>{
-    if(!u.active || !LINES[u.line]) return;
-    if(now-u.updated > STALE_MIN*60000) return;
-    rows.push({id,u});
-  });
-  rows.sort((a,b)=> (a.id===S.uid?-1:0)-(b.id===S.uid?-1:0) || b.u.updated-a.u.updated);
-  const all = Object.values(users), idle = all.filter(u=>!rows.some(r=>r.u===u)).map(u=>esc(u.name||'?'));
-  $('roomInfo').innerHTML = S.room ? `${all.length} in room · ${rows.length} riding` + (idle.length?` · Not riding: ${idle.join(', ')}`:'') : '';
-  if(!S.room){ $('board').innerHTML = empty('Enter a room code and tap Join room to see friends here.'); return; }
-  if(!rows.length){ $('board').innerHTML = empty('No one is riding yet. Share your room code with friends.'); return; }
-  $('board').innerHTML = rows.map(({id,u})=>{
-    const l=LINES[u.line], me=id===S.uid;
-    const [txt,bg,fg] = me ? ['You','#252c38','#e8ecf2'] : offsetBadge(u);
-    const pct = (u.idx/(l.stations.length-1))*100;
-    return `<div class="panel p-4" style="--accent:${l.color}">
-      <div class="flex items-start justify-between gap-2">
-        <div><div class="font-bold text-base">${esc(u.name)}</div>
-        <div class="display text-xl font-extrabold leading-tight mt-0.5">${u.mode==='next'?'Arriving at ':''}${esc(l.stations[u.idx])}</div></div>
-        <span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>
-      </div>
-      <div class="track my-3"><i style="left:${pct}%"></i></div>
-      <div class="text-xs flex justify-between" style="color:var(--muted)">
-        <span>${esc(l.name)} · ${esc(dirLabel(u.line,u.dir))}</span><span>${ago(u.ts)}</span></div>
-    </div>`;
+  const ln=trip?trip.line:S.line;document.body.style.setProperty('--accent',LINES[ln].color);
+  $('roomTxt').textContent=S.room||'Join';
+  renderHero();renderFriends();renderMapStatic();
+}
+function renderHero(){
+  const h=$('hero');
+  if(!trip){h.innerHTML=`<span class="pill">Not riding</span><div class="d text-3xl font-extrabold mt-3 leading-tight">Where are you headed, ${esc(S.name||'friend')}?</div><p class="mut mt-2 text-sm">Tap “Boarded train” when you get on and your friends will see you instantly.</p>`;return}
+  const l=LINES[trip.line],li=live(trip),st=l.stations;
+  const main=li.term?st[li.idx]:li.at?st[li.idx]:st[li.next];
+  const lab=li.term?'You have reached':li.at?'At station':'Next station';
+  const sub=li.term?'Tap “Got off” when you leave the train':li.at?'Doors open · next stop '+(st[trip.idx+(trip.dir==='up'?1:-1)]||'—'):'Just left '+st[li.prev];
+  const pct=li.f/(st.length-1)*100;
+  h.innerHTML=`<div class="flex items-center justify-between"><span class="pill" style="color:var(--accent)">${esc(l.name)}</span><span class="pill">→ ${esc(dirName(trip.line,trip.dir))}</span></div>
+   <div class="text-sm mut mt-4">${lab}</div>
+   <div class="flex items-end justify-between gap-3"><div class="d text-4xl font-extrabold leading-none">${esc(main)}</div>${!li.at?`<div class="d text-2xl font-extrabold" style="color:var(--accent)">${eta(li.secs)}</div>`:''}</div>
+   <div class="text-sm mut mt-2">${esc(sub)}</div>
+   <div class="rail"><i style="left:${pct}%"></i></div>
+   <div class="flex justify-between text-xs mut"><span>${esc(st[0])}</span><span>${esc(st.at(-1))}</span></div>
+   <div class="text-xs mut mt-3">Checked in ${fmtT(trip.ts)}${trip.offset?` · shift ${trip.offset>0?'+':''}${trip.offset} train`:''} · estimated</div>`;
+}
+function renderFriends(){
+  const rs=riders(),all=Object.values(users).filter(u=>u&&u.v===2);
+  const idle=all.filter(u=>!rs.some(r=>r.u===u)).map(u=>esc(u.name||'?'));
+  $('roomInfo').innerHTML=S.room?`${all.length} in room “${esc(S.room)}” · ${rs.length} riding${idle.length?' · Not riding: '+idle.join(', '):''}`:'';
+  const c=$('cnt');c.textContent=rs.length;c.classList.toggle('hidden',!rs.length);
+  if(!rs.length){$('board').innerHTML=`<div class="card p-6 text-center text-sm mut">No one is riding yet.<br>Tap Invite in the room menu to share the link.</div>`;return}
+  const now=Date.now(),mine=trip?live(trip,now):null;
+  $('board').innerHTML=rs.map(({id,u})=>{
+    const me=id===S.uid,l=LINES[u.line],li=live(u,now),[t,bg,fg]=me?['You','#262e3b','#eef1f6']:compare(u);
+    let apart='';
+    if(!me&&mine&&trip.line===u.line&&trip.dir===u.dir){const d=li.f-mine.f,k=Math.round(Math.abs(d));if(k>0)apart=`<div class="text-xs mut mt-1 text-right">≈${k} stop${k>1?'s':''} ${d*(u.dir==='up'?1:-1)>0?'ahead':'behind'}</div>`}
+    return `<div class="card fr"><div class="av" style="background:${hue(u.name)}">${esc(u.name[0]||'?').toUpperCase()}</div>
+     <div class="min-w-0 flex-1"><div class="font-bold">${esc(u.name)}</div><div class="d font-extrabold text-lg leading-tight">${esc(liveText(u,li))}</div>
+     <div class="text-xs mut mt-1 truncate" style="color:${l.color}">${esc(l.name)} → ${esc(dirName(u.line,u.dir))} <span class="mut">· ${ago(u.ts)}</span></div></div>
+     <div><span class="badge" style="background:${bg};color:${fg}">${esc(t)}</span>${apart}</div></div>`;
   }).join('');
 }
-const empty = t => `<div class="panel p-5 text-sm text-center" style="color:var(--muted)">${t}</div>`;
 
-/* ---------------- Sheets ---------------- */
-function openSheet(title, html){ $('sheetTitle').textContent=title; $('sheetBody').innerHTML=html; $('sheet').classList.add('open'); }
-const closeSheet = () => $('sheet').classList.remove('open');
-$('sheetClose').onclick=closeSheet;
-$('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
-
-function needIdentity(){
-  if(!S.name||!S.room){ toast('Enter your name and room first'); $(!S.name?'name':'room').focus(); return true; }
-  return false;
+/* ---------- Live map ---------- */
+function renderMapStatic(){
+  const ml=S.mapLine,l=LINES[ml];
+  $('mapSeg').innerHTML=Object.entries(LINES).map(([k,v])=>`<button data-m="${k}" class="${k===ml?'on':''}" style="--c:${v.color}">${v.name}</button>`).join('');
+  $('mapSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.mapLine=b.dataset.m;persist();mapScrolled=false;markers={};render();updateMarkers()});
+  $('mUp').textContent=l.stations[0];$('mDn').textContent=l.stations.at(-1);
+  const box=$('mapBox');box.style.cssText=`--mc:${l.color};height:${l.stations.length*ROW}px`;
+  box.innerHTML='<div class="mrail" style="top:28px;height:'+((l.stations.length-1)*ROW)+'px"></div>'+l.stations.map((s,i)=>`<div class="mrow"><span class="sd"></span><span class="nm">${esc(s)}</span>${l.x[i]?`<span class="tg">${l.x[i]}</span>`:''}</div>`).join('');
+  markers={};updateMarkers();
 }
-
-/* ---------------- Actions ---------------- */
-$('bBoard').onclick=()=>{
-  if(needIdentity()) return;
-  const st=L().stations;
-  const order = [...st.keys()].filter(i => S.dir==='up' ? i<st.length-1 : i>0);
-  openSheet(`Boarded at… (${L().name}, ${dirLabel(S.line,S.dir)})`,
-    order.map(i=>`<button class="st" data-i="${i}"><span class="dot"></span>${esc(st[i])}</button>`).join(''));
-  document.querySelectorAll('#sheetBody .st').forEach(b=>b.onclick=()=>{
-    trip={line:S.line,dir:S.dir,idx:+b.dataset.i,ts:Date.now(),offset:0,mode:'at'};
-    save(); push(); closeSheet(); render(); toast('Checked in at '+st[+b.dataset.i]+' · '+fmtTime(trip.ts));
+function updateMarkers(){
+  const box=$('mapBox');if(!box)return;const now=Date.now(),seen={},rs=riders().filter(r=>r.u.line===S.mapLine);
+  rs.forEach(({id,u})=>{
+    const li=live(u,now);seen[id]=1;let el=markers[id];
+    if(!el){el=markers[id]=document.createElement('div');el.className='mk'+(id===S.uid?' me':'');el.textContent=(u.name[0]||'?').toUpperCase();el.style.background=hue(u.name);box.appendChild(el)}
+    el.style.top=(li.f*ROW+ROW/2-16)+'px';el.style.left=(u.dir==='up'?150:80)+'px';el.title=u.name;
   });
-};
+  for(const id in markers)if(!seen[id]){markers[id].remove();delete markers[id]}
+  $('legend').innerHTML=rs.length?rs.map(({id,u})=>`<span class="pill"><i style="width:10px;height:10px;border-radius:9px;background:${hue(u.name)}"></i>${esc(id===S.uid?'You':u.name)} · ${esc(liveText(u,live(u,now)))}</span>`).join(''):'<span class="text-sm mut">No one is riding this line right now.</span>';
+  if(view==='map'&&!mapScrolled&&trip&&trip.line===S.mapLine&&markers[S.uid]){mapScrolled=true;markers[S.uid].scrollIntoView({block:'center'})}
+}
+setInterval(()=>{tickN++;if(trip)renderHero();updateMarkers();if(tickN%5===0)renderFriends()},1000);
 
-$('bNext').onclick=()=>{
-  if(needIdentity()) return;
-  if(!trip){ toast('Tap “Boarded train” first'); return; }
-  const n=trip.idx+(trip.dir==='up'?1:-1), st=LINES[trip.line].stations;
-  if(n<0||n>=st.length){ toast('You are at the final station'); return; }
-  trip.idx=n; trip.mode='at'; trip.ts=Date.now(); save(); push(); render(); toast('Now at '+st[n]);
-};
+/* ---------- Tabs, sheets, toast ---------- */
+function show(v){view=v;['ride','map','friends'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();scrollTo(0,0)}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+const closeSheet=()=>$('sh').classList.remove('open');
+function sheet(t,h){$('shT').textContent=t;$('shB').innerHTML=h;$('sh').classList.add('open')}
+$('shX').onclick=closeSheet;$('sh').onclick=e=>{if(e.target.id==='sh')closeSheet()};
+function toast(t,undo){const el=$('toast');el.innerHTML=esc(t)+(undo?' <button id="tu">Undo</button>':'');el.classList.add('show');if(undo)$('tu').onclick=()=>{undo();el.classList.remove('show')};clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),undo?6000:1800)}
+const stRows=(ln,ord,cur)=>ord.map(i=>`<button class="st ${i===cur?'cur':''}" data-i="${i}" style="--accent:${LINES[ln].color}"><span class="dot"></span><span class="flex-1">${esc(LINES[ln].stations[i])}</span>${LINES[ln].x[i]?`<span class="tag">${LINES[ln].x[i]}</span>`:''}${i===cur?'<span class="tag">current</span>':''}</button>`).join('');
+const order=(ln,dir)=>{const o=[...LINES[ln].stations.keys()];return dir==='down'?o.reverse():o};
 
-$('bOff').onclick=()=>{
-  if(needIdentity()) return;
-  if(!trip){ toast('Tap “Boarded train” first'); return; }
+/* ---------- Actions ---------- */
+function openBoard(){
+  let bl=trip?trip.line:S.line,bd=trip?trip.dir:S.dir;
   const draw=()=>{
-    $('sheetBody').innerHTML = `<p class="text-sm mb-4" style="color:var(--muted)">Your train is running earlier or later than the one you checked in on? Shift by whole trains (about ${HEADWAY} min each).</p>
-      <div class="flex items-center gap-3">
-        <button id="oBehind" class="flex-1 py-5 rounded-2xl font-bold text-lg" style="background:#78350f;color:#fcd34d">1 Train Behind</button>
-        <button id="oAhead" class="flex-1 py-5 rounded-2xl font-bold text-lg" style="background:#1e3a8a;color:#93c5fd">1 Train Ahead</button>
-      </div>
-      <div class="text-center mt-4 display text-xl font-bold">${trip.offset===0?'No shift':(trip.offset>0?trip.offset+' ahead':(-trip.offset)+' behind')}</div>
-      <button id="oReset" class="w-full mt-3 py-3 rounded-xl" style="background:var(--bg);border:1px solid var(--line)">Reset to 0</button>`;
-    const set=d=>{ trip.offset=(trip.offset||0)+d; trip.ts=Date.now(); save(); push(); render(); draw(); };
-    $('oAhead').onclick=()=>set(1); $('oBehind').onclick=()=>set(-1);
-    $('oReset').onclick=()=>{ trip.offset=0; save(); push(); render(); draw(); };
-  };
-  openSheet('Train ahead / behind',''); draw();
+    const l=LINES[bl];
+    sheet('Boarded at…',`<div class="seg mb-2">${Object.entries(LINES).map(([k,v])=>`<button data-l="${k}" class="${k===bl?'on':''}" style="--c:${v.color}">${v.name}</button>`).join('')}</div>
+     <div class="seg mb-2">${['up','down'].map(d=>`<button data-d="${d}" class="${d===bd?'on':''}" style="--c:${l.color}">→ ${esc(dirName(bl,d))}</button>`).join('')}</div>${stRows(bl,order(bl,bd).slice(0,-1))}`);
+    $('shB').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{bl=b.dataset.l;draw()});
+    $('shB').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{bd=b.dataset.d;draw()});
+    $('shB').querySelectorAll('.st').forEach(b=>b.onclick=()=>{
+      S.line=bl;S.dir=bd;S.mapLine=bl;trip={line:bl,dir:bd,idx:+b.dataset.i,ts:Date.now(),offset:0,mode:'at'};
+      persist();push();closeSheet();vib();render();toast('Checked in at '+LINES[bl].stations[+b.dataset.i]+' · '+fmtT(trip.ts));mapScrolled=false;
+    });
+  };draw();
+}
+function setPos(i,mode){trip.idx=i;trip.mode=mode;trip.ts=Date.now();persist();push();closeSheet();vib();render();toast((mode==='next'?'Coming up: ':'Now at ')+LINES[trip.line].stations[i])}
+$('bBoard').onclick=openBoard;
+$('bNext').onclick=()=>{
+  if(!trip)return openBoard();
+  const li=live(trip),sg=trip.dir==='up'?1:-1,n=li.term?null:li.at?trip.idx+sg:li.next;
+  if(n==null||n<0||n>=LINES[trip.line].stations.length)return toast('You are at the final station');
+  setPos(n,'at');
 };
-
+$('bPos').onclick=()=>{
+  if(!trip)return openBoard();
+  const draw=()=>{
+    const m=S.pm,o=order(trip.line,trip.dir),l=LINES[trip.line];
+    sheet('Where are you?',`<div class="seg mb-2"><button data-p="at" class="${m==='at'?'on':''}">I'm at…</button><button data-p="next" class="${m==='next'?'on':''}">Coming up next…</button></div>
+     <p class="text-sm mut mb-1">${esc(l.name)} → ${esc(dirName(trip.line,trip.dir))}</p>${stRows(trip.line,m==='next'?o.slice(1):o,(trip.mode||'at')===m?trip.idx:-1)}`);
+    $('shB').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{S.pm=b.dataset.p;persist();draw()});
+    $('shB').querySelectorAll('.st').forEach(b=>b.onclick=()=>setPos(+b.dataset.i,S.pm));
+  };draw();
+};
+$('bOff').onclick=()=>{
+  if(!trip)return openBoard();
+  const draw=()=>{
+    sheet('Train ahead / behind',`<p class="text-sm mut mb-4">Running earlier or later than the train you checked in on? Shift by whole trains (about ${HEADWAY} min each).</p>
+     <div class="grid2"><button id="oB" class="act" style="background:#78350f;color:#fcd34d"><b>1 train behind</b><span>I missed one</span></button><button id="oA" class="act" style="background:#1e3a8a;color:#93c5fd"><b>1 train ahead</b><span>I caught an earlier one</span></button></div>
+     <div class="text-center d text-xl font-extrabold mt-4">${!trip.offset?'No shift':trip.offset>0?trip.offset+' ahead':-trip.offset+' behind'}</div>
+     <button id="oR" class="w-full mt-3 py-3 rounded-2xl card font-semibold">Reset to 0</button>`);
+    const set=d=>{trip.offset=d===0?0:(trip.offset||0)+d;persist();push();vib();render();draw()};
+    $('oA').onclick=()=>set(1);$('oB').onclick=()=>set(-1);$('oR').onclick=()=>set(0);
+  };draw();
+};
 $('bEnd').onclick=()=>{
-  if(!trip){ toast('No active trip'); return; }
-  trip=null; save(); push(); render(); toast('Trip ended. Take care!');
+  if(!trip)return toast('No active trip');
+  const prev=trip;trip=null;persist();push();vib();render();
+  toast('Trip ended. Take care!',()=>{trip={...prev,ts:Date.now()};persist();push();render()});
 };
 
-/* ---------------- Identity, line & direction ---------------- */
-$('join').onclick=()=>{
-  S.name=$('name').value.trim(); S.room=$('room').value.trim();
-  if(needIdentity()) return;
-  save(); connect(); push(); toast('Joined room “'+S.room+'”');
+/* ---------- Room & profile ---------- */
+function openOnb(cancel){$('name').value=S.name;$('room').value=S.room;$('onbX').classList.toggle('hidden',!cancel);$('onb').classList.add('open')}
+$('onbX').onclick=()=>$('onb').classList.remove('open');
+$('go').onclick=()=>{
+  const n=$('name').value.trim(),r=$('room').value.trim();
+  if(!n)return $('name').focus();if(!r)return $('room').focus();
+  if(S.room&&r.toLowerCase()!==S.room.toLowerCase()&&ref){ // leaving old room
+    if(fbReady&&ref.child)ref.child(S.uid).remove();trip=null}
+  S.name=n;S.room=r;persist();$('onb').classList.remove('open');connect();push();render();
 };
-document.querySelectorAll('#lineSeg button').forEach(b=>b.onclick=()=>{ S.line=b.dataset.line; save(); render(); });
-document.querySelectorAll('#dirSeg button').forEach(b=>b.onclick=()=>{ S.dir=b.dataset.dir; save(); render(); });
-
-/* ---------------- Init ---------------- */
-/* ---------------- Position tabs: "I'm at" / "Coming up next" ---------------- */
-const posCtx = () => trip ? {line:trip.line,dir:trip.dir} : {line:S.line,dir:S.dir};
-function renderPos(){
-  const c=posCtx(), l=LINES[c.line];
-  document.querySelectorAll('#posTabs button').forEach(b=>b.classList.toggle('on',b.dataset.pm===S.pm));
-  let order=[...l.stations.keys()]; if(c.dir==='down') order.reverse();
-  if(S.pm==='next') order=order.slice(1);   // can't be approaching the starting station
-  $('posHint').textContent = (S.pm==='next'?'Which station is coming up next?':'Which station are you at?')+' · '+l.name+' '+dirLabel(c.line,c.dir).toLowerCase();
-  $('posList').innerHTML = order.map(i=>{
-    const cur = trip && trip.idx===i && (trip.mode||'at')===S.pm;
-    return `<button class="st" data-i="${i}"><span class="dot" style="${cur?'background:'+l.color:''}"></span>${esc(l.stations[i])}${cur?'<span class="ml-auto text-xs" style="color:var(--muted)">current</span>':''}</button>`;
-  }).join('');
-  document.querySelectorAll('#posList .st').forEach(b=>b.onclick=()=>setPos(+b.dataset.i));
-}
-function setPos(i){
-  if(needIdentity()) return;
-  const c=posCtx();
-  if(!trip) trip={line:c.line,dir:c.dir,idx:i,ts:Date.now(),offset:0,mode:S.pm};
-  else { trip.idx=i; trip.ts=Date.now(); trip.mode=S.pm; }
-  save(); push(); render(); toast((S.pm==='next'?'Coming up: ':'Now at ')+LINES[trip.line].stations[i]);
-}
-document.querySelectorAll('#posTabs button').forEach(b=>b.onclick=()=>{ S.pm=b.dataset.pm; save(); renderPos(); });
-
-/* Invite link: friends open it and join with one tap (or automatically if they've set a name before) */
-$('invite').onclick=async()=>{
-  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(S.room);
-  try{
-    if(navigator.share){ await navigator.share({title:'Metro Mates', text:'Join my Metro Mates room', url}); return; }
-    await navigator.clipboard.writeText(url); toast('Invite link copied');
-  }catch(e){ prompt('Copy this invite link:', url); }
+$('roomChip').onclick=()=>{
+  if(!S.room)return openOnb(false);
+  sheet('Your room',`<div class="mb-4"><div class="font-bold text-lg">${esc(S.name)}</div><div class="mut text-sm">Room “${esc(S.room)}” · you stay joined on this phone</div></div>
+   <button id="inv" class="w-full py-4 rounded-2xl font-extrabold" style="background:var(--text);color:var(--ink)">Invite friends</button>
+   <button id="chg" class="w-full mt-2 py-3 rounded-2xl card font-semibold">Change name or room</button>`);
+  $('inv').onclick=async()=>{const url=location.origin+location.pathname+'?room='+encodeURIComponent(S.room);
+    try{if(navigator.share){await navigator.share({title:'MetroSync',text:'Join my MetroSync room',url})}else{await navigator.clipboard.writeText(url);toast('Invite link copied')}}catch(e){prompt('Copy this invite link:',url)}};
+  $('chg').onclick=()=>{closeSheet();openOnb(true)};
 };
 
-/* Switch room: removes you from the current room and shows setup again (name stays filled in) */
-$('leave').onclick=()=>{
-  if(!confirm('Leave room “'+S.room+'” and join a different one?')) return;
-  if(fbReady && ref && ref.child) ref.child(S.uid).remove();
-  else if(ref && ref.key){ delete users[S.uid]; localStorage.setItem(ref.key,JSON.stringify(users)); }
-  if(ref && ref.off) ref.off();
-  ref=null; users={}; trip=null; S.room='';
-  $('name').value=S.name; $('room').value=''; save(); render();
-};
-
-/* Init: restore saved name + room automatically */
-const inviteRoom = new URLSearchParams(location.search).get('room');
-if(inviteRoom && inviteRoom !== S.room && !S.room){
-  $('room').value = inviteRoom;
-  if(S.name){ S.room = inviteRoom; }          // already has a name: join straight away
-}
-if(trip && Date.now()-trip.ts > STALE_MIN*60000) trip=null;   // drop a trip left over from an earlier day
-$('name').value = S.name||''; if(!$('room').value) $('room').value = S.room||''; $('hw').textContent=HEADWAY;
-save(); connect(); render();
-if(S.name && S.room) push();
-setInterval(render, 20000);   // refresh "x min ago" and drop stale riders
+/* ---------- Init ---------- */
+$('hw').textContent=HEADWAY;
+const inv=new URLSearchParams(location.search).get('room');
+if(inv&&!S.room){S.room=inv;if(S.name)persist()}
+persist();connect();render();
+if(!S.name||!S.room)openOnb(false);else push();
 </script>
 </body>
 </html>
