@@ -51,12 +51,16 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
 /* map */
 #mapBox{position:relative}
 .mrow{height:56px;display:flex;align-items:center;position:relative}
-.mrow .nm{position:absolute;left:196px;font-size:.95rem;font-weight:600}
-.mrow .tg{position:absolute;left:196px;top:34px;font-size:.62rem;color:var(--mut)}
-.mrow .sd{position:absolute;left:123px;width:14px;height:14px;border-radius:99px;background:var(--bg);border:3px solid var(--mc)}
-.mrail{position:absolute;left:127px;width:6px;top:28px;bottom:28px;background:var(--mc);border-radius:9px;opacity:.85}
-.mk{position:absolute;width:32px;height:32px;border-radius:99px;display:grid;place-items:center;font-weight:800;font-size:.8rem;color:var(--ink);transition:top 1s linear;border:2px solid var(--card);z-index:5}
-.mk.me{box-shadow:0 0 0 3px #fff}
+.mrow .nm{position:absolute;left:200px;font-size:.92rem;font-weight:600;white-space:nowrap}
+.mrow .tg{position:absolute;left:200px;top:35px;font-size:.62rem;color:var(--mut)}
+.mrow .sd{position:absolute;left:106px;width:14px;height:14px;border-radius:99px;background:var(--bg);border:3px solid var(--mc)}
+.mrail{position:absolute;left:110px;width:6px;background:var(--mc);border-radius:9px;opacity:.85}
+.tr{position:absolute;height:34px;border-radius:13px;background:var(--card2);border:2px solid var(--mc);display:flex;align-items:center;padding:0 6px 0 4px;transform:translateX(-50%);transition:top 1s linear;z-index:5}
+.tr.me{box-shadow:0 0 0 3px #fff}
+.tr b{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:.72rem;color:var(--ink);border:2px solid var(--card2);margin-right:-8px}
+.tr b:last-of-type{margin-right:0}
+.tr i{font-style:normal;font-size:.6rem;margin-left:5px;color:var(--mc)}
+.tr small{position:absolute;top:36px;left:50%;transform:translateX(-50%);max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62rem;font-weight:600;background:var(--card);padding:0 4px;border-radius:6px}
 #toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#000;padding:.65rem 1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;display:flex;gap:12px;align-items:center;white-space:nowrap}
 #toast.show{opacity:1;pointer-events:auto}
 #toast button{font-weight:800;color:#2563eb}
@@ -96,7 +100,7 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
     <div class="seg mb-3" id="mapSeg"></div>
     <div id="legend" class="flex flex-wrap gap-2 mb-3"></div>
     <div class="card p-3 overflow-hidden">
-      <div class="flex text-xs mut font-semibold" style="padding-left:78px"><span style="width:68px">↑ <span id="mUp"></span></span><span style="margin-left:6px">↓ <span id="mDn"></span></span></div>
+      <div class="text-xs mut font-semibold" style="position:relative;height:16px"><span style="position:absolute;left:25px;width:76px;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">↑ <span id="mUp"></span></span><span style="position:absolute;left:125px;width:76px;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">↓ <span id="mDn"></span></span></div>
       <div id="mapBox" class="mt-2"></div>
     </div>
   </section>
@@ -145,7 +149,7 @@ const FIREBASE_CONFIG = {
 };
 
 /* ---------- Data ("up" = toward LAST station, "down" = toward FIRST) ---------- */
-const HEADWAY=8, STALE_MIN=45, DWELL=0.4, ROW=56;
+const HEADWAY=8, STALE_MIN=45, DWELL=0.4, ROW=56, TRAIN_GAP=3; // riders whose train left the terminus within TRAIN_GAP min are "on the same train"
 const LINES={
  r7:{name:'Red Line 7',color:'#ef4444',
   stations:['Kashigaon','Miragaon','Pandurangwadi','Dahisar East','Ovaripada','National Park','Devipada','Magathane','Poisar','Akurli','Kurar','Dindoshi','Aarey','Goregaon East','Jogeshwari East','Mogra','Gundavali'],
@@ -271,19 +275,44 @@ function renderMapStatic(){
   $('mapSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.mapLine=b.dataset.m;persist();mapScrolled=false;markers={};render();updateMarkers()});
   $('mUp').textContent=l.stations[0];$('mDn').textContent=l.stations.at(-1);
   const box=$('mapBox');box.style.cssText=`--mc:${l.color};height:${l.stations.length*ROW}px`;
-  box.innerHTML='<div class="mrail" style="top:28px;height:'+((l.stations.length-1)*ROW)+'px"></div>'+l.stations.map((s,i)=>`<div class="mrow"><span class="sd"></span><span class="nm">${esc(s)}</span>${l.x[i]?`<span class="tg">${l.x[i]}</span>`:''}</div>`).join('');
+  box.innerHTML='<div class="mrail" style="top:'+(ROW/2)+'px;height:'+((l.stations.length-1)*ROW)+'px"></div>'+l.stations.map((s,i)=>`<div class="mrow"><span class="sd"></span><span class="nm">${esc(s)}</span>${l.x[i]?`<span class="tg">${l.x[i]}</span>`:''}</div>`).join('');
   markers={};updateMarkers();
 }
-function updateMarkers(){
-  const box=$('mapBox');if(!box)return;const now=Date.now(),seen={},rs=riders().filter(r=>r.u.line===S.mapLine);
-  rs.forEach(({id,u})=>{
-    const li=live(u,now);seen[id]=1;let el=markers[id];
-    if(!el){el=markers[id]=document.createElement('div');el.className='mk'+(id===S.uid?' me':'');el.textContent=(u.name[0]||'?').toUpperCase();el.style.background=hue(u.name);box.appendChild(el)}
-    el.style.top=(li.f*ROW+ROW/2-16)+'px';el.style.left=(u.dir==='up'?150:80)+'px';el.title=u.name;
+/* Group riders who are on the same physical train (same line, same direction,
+   and estimated departure time from the terminus within TRAIN_GAP minutes). */
+function trains(rs,now){
+  const out=[];
+  ['up','down'].forEach(d=>{
+    const a=rs.filter(r=>r.u.dir===d).map(r=>({...r,ot:originTime(r.u)})).sort((x,y)=>x.ot-y.ot);
+    let g=null;
+    a.forEach(r=>{
+      if(g&&Math.abs(r.ot-g.avg)<=TRAIN_GAP*60000){g.m.push(r);g.avg=g.m.reduce((s,x)=>s+x.ot,0)/g.m.length}
+      else{g={m:[r],avg:r.ot};out.push(g)}
+    });
   });
-  for(const id in markers)if(!seen[id]){markers[id].remove();delete markers[id]}
-  $('legend').innerHTML=rs.length?rs.map(({id,u})=>`<span class="pill"><i style="width:10px;height:10px;border-radius:9px;background:${hue(u.name)}"></i>${esc(id===S.uid?'You':u.name)} · ${esc(liveText(u,live(u,now)))}</span>`).join(''):'<span class="text-sm mut">No one is riding this line right now.</span>';
-  if(view==='map'&&!mapScrolled&&trip&&trip.line===S.mapLine&&markers[S.uid]){mapScrolled=true;markers[S.uid].scrollIntoView({block:'center'})}
+  return out.map(g=>{
+    const lead=g.m.reduce((p,c)=>c.u.ts>p.u.ts?c:p);          // freshest check-in = best position fix
+    return{m:g.m,lead,dir:lead.u.dir,li:live(lead.u,now),key:lead.u.dir+'|'+g.m.map(x=>x.id).sort().join(',')};
+  });
+}
+const nm=(x)=>x.id===S.uid?'You':x.u.name;
+function updateMarkers(){
+  const box=$('mapBox');if(!box)return;const now=Date.now(),seen={};
+  const ts=trains(riders().filter(r=>r.u.line===S.mapLine),now);
+  ts.forEach(t=>{
+    let el=markers[t.key];
+    if(!el){
+      el=markers[t.key]=document.createElement('div');
+      el.className='tr'+(t.m.some(x=>x.id===S.uid)?' me':'');
+      el.innerHTML=t.m.map(x=>`<b style="background:${hue(x.u.name)}">${esc((x.u.name[0]||'?').toUpperCase())}</b>`).join('')+`<i>${t.dir==='up'?'▼':'▲'}</i><small>${t.m.map(x=>esc(nm(x))).join(', ')}</small>`;
+      el.style.left=(t.dir==='up'?163:63)+'px';box.appendChild(el);
+    }
+    el.style.top=(t.li.f*ROW+ROW/2-17)+'px';seen[t.key]=1;
+  });
+  for(const k in markers)if(!seen[k]){markers[k].remove();delete markers[k]}
+  $('legend').innerHTML=ts.length?ts.map(t=>`<span class="pill" style="text-transform:none;letter-spacing:0;font-size:.78rem">${t.m.map(x=>`<i style="width:10px;height:10px;border-radius:9px;background:${hue(x.u.name)}"></i>`).join('')}${esc(t.m.map(nm).join(' + '))} · ${esc(liveText(t.lead.u,t.li))}</span>`).join(''):'<span class="text-sm mut">No one is riding this line right now.</span>';
+  const mine=ts.find(t=>t.m.some(x=>x.id===S.uid));
+  if(view==='map'&&!mapScrolled&&mine&&markers[mine.key]){mapScrolled=true;markers[mine.key].scrollIntoView({block:'center'})}
 }
 setInterval(()=>{tickN++;if(trip)renderHero();updateMarkers();if(tickN%5===0)renderFriends()},1000);
 
