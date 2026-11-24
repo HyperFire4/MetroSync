@@ -266,24 +266,26 @@ function renderFriends(){
     const others=t.m.filter(x=>x.id!==id).map(nm);
     let apart='';
     if(!me&&mt&&t!==mt&&t.line===mt.line&&t.dir===mt.dir){const d=li.f-mt.li.f,k=Math.round(Math.abs(d));if(k>0)apart=`<div class="text-xs mut mt-1 text-right">≈${k} stop${k>1?'s':''} ${d*(u.dir==='up'?1:-1)>0?'ahead':'behind'}</div>`}
-    return `<div class="card fr"><div class="av" style="background:${hue(u.name)}">${esc(u.name[0]||'?').toUpperCase()}</div>
+    return `<div class="card"><div class="fr"><div class="av" style="background:${hue(u.name)}">${esc(u.name[0]||'?').toUpperCase()}</div>
      <div class="min-w-0 flex-1"><div class="font-bold">${esc(u.name)}${others.length?` <span class="mut text-xs font-normal">· with ${esc(others.join(', '))}</span>`:''}</div><div class="d font-extrabold text-lg leading-tight">${esc(liveText(t.lead.u,li))}</div>
      <div class="text-xs mut mt-1 truncate" style="color:${l.color}">${esc(l.name)} → ${esc(dirName(u.line,u.dir))} <span class="mut">· ${ago(u.ts)}</span></div></div>
-     <div><span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>${apart}</div></div>`;
+     <div><span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>${apart}</div></div><div class="px-4 pb-4">${etaBar(u,li)}</div></div>`;
   }).join('');
 }
 
 /* ---------- "Reaching X in …" bar ---------- */
-function renderEta(){
-  const el=$('eta');if(!trip){el.classList.add('hidden');return}
-  el.classList.remove('hidden');
-  const l=LINES[trip.line],c=l.cum,sg=trip.dir==='up'?1:-1,n=c.length,li=myLive();
-  const dest=trip.dest!=null?trip.dest:(sg>0?n-1:0),from=trip.from!=null?trip.from:trip.idx;
+function etaBar(u,li,tag){
+  const l=LINES[u.line],c=l.cum,sg=u.dir==='up'?1:-1,n=c.length;
+  const dest=u.dest!=null?u.dest:(sg>0?n-1:0),from=u.from!=null?u.from:u.idx;
   const rem=Math.max(0,sg>0?c[dest]-li.m:li.m-c[dest]),total=Math.max(.1,Math.abs(c[dest]-c[from]));
   const pct=Math.min(100,Math.max(0,(1-rem/total)*100)),done=rem<=0.05;
-  el.innerHTML=`<div class="flex items-center justify-between gap-3"><div class="font-bold">${done?'Reached':'Reaching'} ${esc(l.stations[dest])}${done?'':' in <span style="color:var(--accent)">'+fmtDur(rem)+'</span>'}</div><span class="tag">Change</span></div>
-   <div class="rail" style="margin:12px 0 6px"><div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:var(--accent);border-radius:9px;transition:width 1s linear"></div></div>
+  return `<div class="flex items-center justify-between gap-3"><div class="font-bold text-sm">${done?'Reached':'Reaching'} ${esc(l.stations[dest])}${done?'':' in <span style="color:'+l.color+'">'+fmtDur(rem)+'</span>'}</div>${tag?'<span class="tag">Change</span>':''}</div>
+   <div class="rail" style="margin:10px 0 6px"><div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${l.color};border-radius:9px;transition:width 1s linear"></div></div>
    <div class="flex justify-between text-xs mut"><span>${esc(l.stations[from])}</span><span>${done?'':'about '+fmtT(Date.now()+rem*60000)}</span></div>`;
+}
+function renderEta(){
+  const el=$('eta');if(!trip){el.classList.add('hidden');return}
+  el.classList.remove('hidden');el.innerHTML=etaBar(trip,myLive(),true);
 }
 $('eta').onclick=()=>{
   if(!trip)return;const li=myLive(),sg=trip.dir==='up'?1:-1,n=LINES[trip.line].stations.length;
