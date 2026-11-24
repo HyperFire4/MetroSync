@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0e13">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MetroSync">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>MetroSync</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +45,7 @@ input{background:var(--bg);border:1px solid var(--line);border-radius:14px;color
 .sheet>div{background:var(--card);width:100%;max-width:480px;margin:0 auto;max-height:82vh;overflow:auto;border-radius:28px 28px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
 .grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 14px}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(11,14,19,.88);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom))}
-nav>div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+nav>div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 nav button{padding:.7rem 0;border-radius:16px;font-weight:700;font-size:.85rem;color:var(--mut);position:relative}
 nav button.on{background:var(--card2);color:var(--text)}
 nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;background:var(--accent);color:var(--ink);border-radius:99px;padding:0 .4rem}
@@ -61,6 +67,16 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
 .tr b:last-of-type{margin-right:0}
 .tr i{font-style:normal;font-size:.6rem;margin-left:5px;color:var(--mc)}
 .tr small{position:absolute;top:36px;left:50%;transform:translateX(-50%);max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62rem;font-weight:600;background:var(--card);padding:0 4px;border-radius:6px}
+#v-chat{padding-bottom:130px}
+#msgs{display:flex;flex-direction:column}
+.cm{max-width:82%;align-self:flex-start;background:var(--card2);padding:.55rem .8rem .35rem;border-radius:18px 18px 18px 6px;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere;margin-top:3px}
+.cm.me{align-self:flex-end;background:var(--accent);color:var(--ink);border-radius:18px 18px 6px 18px}
+.ct{font-size:.62rem;opacity:.6;text-align:right;margin-top:1px}
+.cn{font-size:.72rem;font-weight:700;margin:10px 10px 1px}
+#composer{display:none;position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));z-index:39;background:rgba(11,14,19,.94);backdrop-filter:blur(14px);padding:10px 16px 8px;border-top:1px solid var(--line)}
+#composer.on{display:block}
+#composer>div{max-width:480px;margin:0 auto}
+.chip{white-space:nowrap;font-size:.8rem;font-weight:600;padding:.4rem .8rem;border-radius:99px;background:var(--card2);border:1px solid var(--line)}
 #toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#000;padding:.65rem 1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;display:flex;gap:12px;align-items:center;white-space:nowrap}
 #toast.show{opacity:1;pointer-events:auto}
 #toast button{font-weight:800;color:#2563eb}
@@ -81,6 +97,7 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
 
   <!-- RIDE -->
   <section id="v-ride" class="space-y-4">
+    <div id="inst" class="hidden card p-4 flex items-center gap-3"><div class="flex-1"><div class="font-bold">Install MetroSync</div><div class="text-xs mut">Full-screen app on your home screen that opens instantly.</div></div><button id="instGo" class="px-4 py-2 rounded-xl font-bold" style="background:var(--text);color:var(--ink)">Install</button><button id="instNo" class="mut px-1 text-xl" aria-label="Dismiss">×</button></div>
     <div id="hero" class="hero"></div>
     <button id="eta" class="card w-full p-4 text-left hidden"></button>
     <div class="grid2">
@@ -112,12 +129,25 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
     <p id="roomInfo" class="text-xs mut mb-3"></p>
     <div id="board" class="space-y-3"></div>
   </section>
+
+  <!-- CHAT -->
+  <section id="v-chat" class="hidden">
+    <h2 class="d text-xl font-extrabold mb-1">Room chat</h2>
+    <p class="text-xs mut mb-2">Everyone in “<span id="chatRoom"></span>” sees these messages.</p>
+    <div id="msgs"></div>
+  </section>
 </div>
+
+<div id="composer"><div>
+  <div id="chips" class="flex gap-2 overflow-x-auto pb-2"></div>
+  <div class="flex gap-2"><input id="msgIn" maxlength="300" placeholder="Message your room…" autocomplete="off"><button id="send" class="px-5 rounded-2xl font-extrabold" style="background:var(--accent);color:var(--ink)">Send</button></div>
+</div></div>
 
 <nav><div>
   <button data-v="ride" class="on">Ride</button>
   <button data-v="map">Live map</button>
   <button data-v="friends">Friends<em id="cnt" class="hidden"></em></button>
+  <button data-v="chat">Chat<em id="ccnt" class="hidden"></em></button>
 </div></nav>
 
 <div id="sh" class="sheet"><div><div class="grab"></div><h2 id="shT" class="d text-xl font-extrabold mb-3"></h2><div id="shB"></div>
@@ -174,10 +204,11 @@ const hue=n=>{let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return `hs
 const ld=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 
-let S=Object.assign({uid:null,name:'',room:'',line:'r7',dir:'up',pm:'at',mapLine:'r7'},ld('metroSync')||{});
+let S=Object.assign({uid:null,name:'',room:'',line:'r7',dir:'up',pm:'at',mapLine:'r7',chatRead:Date.now()},ld('metroSync')||{});
 if(!S.uid){const o=ld('metroMates')||{};S.uid=o.uid||'u'+Math.random().toString(36).slice(2,10);if(!S.name){S.name=o.name||'';S.room=o.room||''}}  // migrate from old app
 let trip=ld('metroSyncTrip');
 if(trip&&Date.now()-trip.ts>STALE_MIN*60000)trip=null;
+let cref=null,lck=null,chat=[],lastSend=0,forceScroll=false,deferredPrompt=null;
 let users={},db=null,ref=null,view='ride',markers={},tickN=0,mapScrolled=false,lastTrip=null;
 const persist=()=>{sv('metroSync',S);sv('metroSyncTrip',trip)};
 
@@ -210,17 +241,19 @@ function status(t,c){$('sdot').style.background=c;$('sdot').title=t;const w=$('w
 const roomPath=()=>'rooms/'+S.room.toLowerCase().replace(/[^a-z0-9_-]/g,'');
 function connect(){
   try{ref&&ref.off&&ref.off();db&&db.ref('.info/connected').off()}catch(e){}
-  users={};ref=null;if(!S.room){render();return}
+  users={};ref=null;try{cref&&cref.off()}catch(e){}cref=null;lck=null;chat=[];if(!S.room){render();renderChat();return}
   if(fbReady){
     try{
       if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
       db=firebase.database();ref=db.ref(roomPath()+'/users');
       ref.on('value',s=>{users=s.val()||{};render()},()=>status('Permission denied','#ef4444'));
       db.ref('.info/connected').on('value',s=>status(s.val()?'Live':'Reconnecting','#'+(s.val()?'22c55e':'facc15')));
+      cref=db.ref(roomPath()+'/chat').limitToLast(100);cref.on('child_added',x=>addMsg({k:x.key,...x.val()}));
     }catch(e){status('Config error','#ef4444')}
   }else{
     const key='ms_local_'+roomPath(),rd=()=>{users=ld(key)||{};render()};
     ref={off(){removeEventListener('storage',rd)},key};addEventListener('storage',rd);rd();status('Local only','#8a95a8');
+    lck='ms_chat_'+roomPath();const rc=()=>{chat=ld(lck)||[];renderChat()};addEventListener('storage',rc);rc();
   }
 }
 function push(){
@@ -347,7 +380,7 @@ function updateMarkers(){
 setInterval(()=>{tickN++;if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends()},1000);
 
 /* ---------- Tabs, sheets, toast ---------- */
-function show(v){view=v;['ride','map','friends'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();scrollTo(0,0)}
+function show(v){view=v;$('composer').classList.toggle('on',v==='chat');['ride','map','friends','chat'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();if(v==='chat'){forceScroll=true;renderChat()}else scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
 const closeSheet=()=>$('sh').classList.remove('open');
 function sheet(t,h){$('shT').textContent=t;$('shB').innerHTML=h;$('sh').classList.add('open')}
@@ -406,6 +439,64 @@ $('bEnd').onclick=()=>{
   toast('Trip ended. Take care!',()=>{trip={...prev,ts:Date.now()};persist();push();render()});
 };
 
+/* ---------- Room chat (Firebase path: rooms/<room>/chat) ---------- */
+function addMsg(m){
+  if(!m||!m.text||chat.some(x=>x.k===m.k))return;
+  chat.push(m);chat.sort((a,b)=>a.ts-b.ts);if(chat.length>150)chat=chat.slice(-150);renderChat();
+}
+const dayLabel=d=>{const t=new Date(),y=new Date(Date.now()-864e5);return d.toDateString()===t.toDateString()?'Today':d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString([],{day:'numeric',month:'short'})};
+function renderChat(){
+  $('chatRoom').textContent=S.room;
+  const box=$('msgs'),atBottom=innerHeight+scrollY>=document.body.scrollHeight-170;
+  let h='',lastUid=null,lastDay='';
+  chat.forEach(m=>{
+    const d=new Date(m.ts),day=d.toDateString(),me=m.uid===S.uid;
+    if(day!==lastDay){h+=`<div class="text-center text-xs mut my-3">${dayLabel(d)}</div>`;lastDay=day;lastUid=null}
+    if(!me&&m.uid!==lastUid)h+=`<div class="cn" style="color:${hue(m.name||'?')}">${esc(m.name||'?')}</div>`;
+    h+=`<div class="cm${me?' me':''}">${esc(m.text)}<div class="ct">${fmtT(m.ts)}</div></div>`;lastUid=m.uid;
+  });
+  box.innerHTML=h||'<div class="card p-6 text-center text-sm mut">No messages yet. Say hi to your room.</div>';
+  if(view==='chat'){const last=chat.length?chat[chat.length-1].ts:0;if(last>(S.chatRead||0)){S.chatRead=last;persist()}if(forceScroll||atBottom){scrollTo(0,document.body.scrollHeight);forceScroll=false}}
+  const un=chat.filter(m=>m.uid!==S.uid&&m.ts>(S.chatRead||0)).length,c=$('ccnt');
+  c.textContent=un>9?'9+':un;c.classList.toggle('hidden',!un||view==='chat');
+}
+function sendChat(text){
+  const t=String(text||'').trim().slice(0,300);
+  if(!t||!S.room||!S.name||Date.now()-lastSend<600)return;
+  lastSend=Date.now();forceScroll=true;
+  const m={uid:S.uid,name:S.name,text:t,ts:Date.now()};
+  if(fbReady&&db)db.ref(roomPath()+'/chat').push(m).catch(()=>status('Write failed','#ef4444'));
+  else if(lck){m.k='l'+m.ts;chat.push(m);sv(lck,chat.slice(-150));renderChat()}
+  $('msgIn').value='';vib();
+}
+function spot(){
+  if(!trip)return "I'm not on a train yet";
+  const li=myLive(),l=LINES[trip.line],c=l.cum,sg=trip.dir==='up'?1:-1,dest=trip.dest!=null?trip.dest:(sg>0?c.length-1:0);
+  const rem=Math.max(0,sg>0?c[dest]-li.m:li.m-c[dest]);
+  return `${liveText(trip,li)} (${l.name} → ${dirName(trip.line,trip.dir)})`+(rem>0.05?` · reaching ${l.stations[dest]} in ${fmtDur(rem)}`:` · reached ${l.stations[dest]}`);
+}
+const CHIPS=['Running late','On the next train','At the platform','Which coach?','Share my spot'];
+$('chips').innerHTML=CHIPS.map(c=>`<button class="chip">${c}</button>`).join('');
+$('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>sendChat(b.textContent==='Share my spot'?spot():b.textContent));
+$('send').onclick=()=>sendChat($('msgIn').value);
+$('msgIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendChat($('msgIn').value)}});
+
+/* ---------- Install as an app (PWA) ---------- */
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+function renderInstall(){$('inst').classList.toggle('hidden',standalone()||S.instNo||!(deferredPrompt||isIOS))}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;renderInstall()});
+addEventListener('appinstalled',()=>{deferredPrompt=null;renderInstall();toast('MetroSync installed')});
+async function doInstall(){
+  if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;renderInstall();return}
+  sheet('Install MetroSync',isIOS
+    ?'<ol class="space-y-3 text-[15px]"><li><b>1.</b> In Safari, tap the <b>Share</b> button (square with an arrow).</li><li><b>2.</b> Scroll down and tap <b>Add to Home Screen</b>.</li><li><b>3.</b> Tap <b>Add</b>. MetroSync now opens full-screen from your home screen.</li></ol><p class="text-xs mut mt-3">Install only works in Safari on iPhone.</p>'
+    :'<ol class="space-y-3 text-[15px]"><li><b>1.</b> Open the browser menu (⋮).</li><li><b>2.</b> Tap <b>Install app</b> or <b>Add to Home screen</b>.</li><li><b>3.</b> Confirm. If you don\'t see it, open this page in Chrome over https.</li></ol>');
+}
+$('instGo').onclick=doInstall;
+$('instNo').onclick=()=>{S.instNo=true;persist();renderInstall()};
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
 /* ---------- Room & profile ---------- */
 function openOnb(cancel){$('name').value=S.name;$('room').value=S.room;$('onbX').classList.toggle('hidden',!cancel);$('onb').classList.add('open')}
 $('onbX').onclick=()=>$('onb').classList.remove('open');
@@ -420,7 +511,8 @@ $('roomChip').onclick=()=>{
   if(!S.room)return openOnb(false);
   sheet('Your room',`<div class="mb-4"><div class="font-bold text-lg">${esc(S.name)}</div><div class="mut text-sm">Room “${esc(S.room)}” · you stay joined on this phone</div></div>
    <button id="inv" class="w-full py-4 rounded-2xl font-extrabold" style="background:var(--text);color:var(--ink)">Invite friends</button>
-   <button id="chg" class="w-full mt-2 py-3 rounded-2xl card font-semibold">Change name or room</button>`);
+   <button id="chg" class="w-full mt-2 py-3 rounded-2xl card font-semibold">Change name or room</button>${standalone()?'':'<button id="insBtn" class="w-full mt-2 py-3 rounded-2xl card font-semibold">Install app</button>'}`);
+  if($('insBtn'))$('insBtn').onclick=()=>{closeSheet();doInstall()};
   $('inv').onclick=async()=>{const url=location.origin+location.pathname+'?room='+encodeURIComponent(S.room);
     try{if(navigator.share){await navigator.share({title:'MetroSync',text:'Join my MetroSync room',url})}else{await navigator.clipboard.writeText(url);toast('Invite link copied')}}catch(e){prompt('Copy this invite link:',url)}};
   $('chg').onclick=()=>{closeSheet();openOnb(true)};
@@ -430,7 +522,7 @@ $('roomChip').onclick=()=>{
 $('hw').textContent=HEADWAY;
 const inv=new URLSearchParams(location.search).get('room');
 if(inv&&!S.room){S.room=inv;if(S.name)persist()}
-persist();connect();render();
+persist();connect();render();renderChat();renderInstall();
 if(!S.name||!S.room)openOnb(false);else push();
 </script>
 </body>
