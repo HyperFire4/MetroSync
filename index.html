@@ -17,70 +17,94 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#0b0e13;--card:#141922;--card2:#1b212c;--line:#262e3b;--text:#eef1f6;--mut:#8a95a8;--accent:#ef4444;--ink:#0b0e13}
+:root{--bg:#07090d;--card:rgba(255,255,255,.07);--card2:rgba(255,255,255,.1);--line:rgba(255,255,255,.12);--text:#f2f5fa;--mut:#a1abbd;--accent:#ef4444;--ink:#0b0e13;
+ --glass:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.04));--blur:blur(24px) saturate(180%);
+ --hl:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -1px 0 rgba(255,255,255,.05)}
 html,body{background:var(--bg);color:var(--text);font-family:'Figtree',system-ui,sans-serif;margin:0;-webkit-tap-highlight-color:transparent}
+/* colourful light sources behind the glass so the blur has something to refract */
+body::before{content:"";position:fixed;inset:-15%;z-index:-1;pointer-events:none;animation:drift 30s ease-in-out infinite alternate;
+ background:radial-gradient(38% 30% at 12% 8%,color-mix(in srgb,var(--accent) 60%,transparent),transparent 70%),
+  radial-gradient(42% 34% at 92% 28%,rgba(59,130,246,.42),transparent 70%),
+  radial-gradient(48% 40% at 14% 82%,rgba(139,92,246,.40),transparent 70%),
+  radial-gradient(36% 30% at 88% 94%,rgba(236,72,153,.28),transparent 70%)}
+@keyframes drift{to{transform:translate3d(3%,2%,0) scale(1.07)}}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
 .d{font-family:'Bricolage Grotesque','Figtree',sans-serif;letter-spacing:-.02em}
 .wrap{max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px 130px}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-input{background:var(--bg);border:1px solid var(--line);border-radius:14px;color:var(--text);padding:.85rem 1rem;width:100%;font-size:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:22px}
+button:focus-visible,input:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:2px}
+input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:16px;color:var(--text);padding:.85rem 1rem;width:100%;font-size:16px;box-shadow:inset 0 1px 4px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+input::placeholder{color:#7f8aa0}
+.card{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.14);border-radius:26px;box-shadow:var(--hl),0 12px 32px rgba(0,0,0,.3)}
 .mut{color:var(--mut)}
-.hero{border-radius:28px;padding:20px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 60%),var(--card)}
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .65rem;border-radius:99px;background:rgba(255,255,255,.08)}
+.hero{border-radius:32px;padding:20px;border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--hl),0 18px 44px rgba(0,0,0,.38);
+ background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--accent) 42%,transparent),transparent 62%),linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.04))}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.32rem .7rem;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.act{height:96px;border-radius:24px;padding:14px 16px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;transition:transform .08s}
-.act:active{transform:scale(.95)}
+.act{height:96px;border-radius:28px;padding:14px 16px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;transition:transform .12s,filter .12s;border:1px solid rgba(255,255,255,.2);-webkit-backdrop-filter:blur(18px) saturate(190%);backdrop-filter:blur(18px) saturate(190%);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -10px 18px rgba(0,0,0,.12),0 12px 28px rgba(0,0,0,.32)}
+.act:active{transform:scale(.95);filter:brightness(1.15)}
 .act b{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.2rem;line-height:1.05}
-.act span{font-size:.75rem;opacity:.75}
-.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--bg)}
-.seg button{flex:1;padding:.7rem .3rem;border-radius:12px;font-weight:600;font-size:.88rem;color:var(--mut)}
-.seg button.on{background:var(--c,var(--accent));color:var(--ink)}
-.st{display:flex;align-items:center;gap:14px;width:100%;padding:.9rem .4rem;border-bottom:1px solid var(--line);text-align:left;font-size:1.05rem}
+.act span{font-size:.75rem;opacity:.8}
+.gl-green{background:linear-gradient(160deg,rgba(52,211,102,.65),rgba(22,163,74,.26));color:#eafff1}
+.gl-acc{background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 75%,transparent),color-mix(in srgb,var(--accent) 28%,transparent));color:#fff}
+.gl-red{background:linear-gradient(160deg,rgba(239,68,68,.38),rgba(127,29,29,.2));color:#fecaca}
+.gl-amber{background:linear-gradient(160deg,rgba(245,158,11,.6),rgba(180,83,9,.25));color:#fff3c4}
+.gl-blue{background:linear-gradient(160deg,rgba(59,130,246,.6),rgba(30,64,175,.25));color:#dbeafe}
+.seg{display:flex;gap:4px;padding:4px;border-radius:20px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+.seg button{flex:1;padding:.7rem .3rem;border-radius:16px;font-weight:600;font-size:.88rem;color:var(--mut);transition:background .2s}
+.seg button.on{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 0 0 1px color-mix(in srgb,var(--c,var(--accent)) 70%,transparent),0 4px 14px rgba(0,0,0,.3)}
+.st{display:flex;align-items:center;gap:14px;width:100%;padding:.9rem .4rem;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;font-size:1.05rem}
 .st .dot{width:14px;height:14px;border-radius:99px;border:3px solid var(--accent);flex:none}
 .st.cur .dot{background:var(--accent)}
-.tag{font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:99px;background:var(--card2);color:var(--mut);white-space:nowrap}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:flex-end;z-index:50}
+.tag{font-size:.65rem;font-weight:700;padding:.18rem .5rem;border-radius:99px;background:rgba(255,255,255,.12);color:#c3cbda;white-space:nowrap;border:1px solid rgba(255,255,255,.1)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;align-items:flex-end;z-index:50}
 .sheet.open{display:flex}
-.sheet>div{background:var(--card);width:100%;max-width:480px;margin:0 auto;max-height:82vh;overflow:auto;border-radius:28px 28px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
-.grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 14px}
-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(11,14,19,.88);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom))}
-nav>div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-nav button{padding:.7rem 0;border-radius:16px;font-weight:700;font-size:.85rem;color:var(--mut);position:relative}
-nav button.on{background:var(--card2);color:var(--text)}
-nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;background:var(--accent);color:var(--ink);border-radius:99px;padding:0 .4rem}
+.sheet>div{width:100%;max-width:480px;margin:0 auto;max-height:82vh;overflow:auto;border-radius:34px 34px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom));border:1px solid rgba(255,255,255,.18);border-bottom:0;-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%);box-shadow:var(--hl),0 -20px 50px rgba(0,0,0,.4);
+ background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05)),rgba(18,22,30,.62)}
+.grab{width:42px;height:5px;border-radius:9px;background:rgba(255,255,255,.3);margin:4px auto 14px}
+/* floating glass tab bar */
+nav{position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;padding:0 14px;pointer-events:none}
+nav>div{pointer-events:auto;max-width:452px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px;border-radius:32px;border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);box-shadow:var(--hl),0 16px 40px rgba(0,0,0,.45);background:linear-gradient(135deg,rgba(255,255,255,.17),rgba(255,255,255,.05)),rgba(14,17,24,.4)}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.55rem 0 .5rem;border-radius:26px;font-weight:700;font-size:.68rem;color:var(--mut);transition:background .2s,color .2s}
+nav button.on{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.42),0 3px 12px rgba(0,0,0,.28)}
+nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.ic{position:relative;display:block}
+nav em{position:absolute;top:-5px;right:-10px;font-style:normal;font-size:.62rem;font-weight:800;background:var(--accent);color:#fff;border-radius:99px;padding:0 .38rem;min-width:16px;text-align:center;line-height:16px;box-shadow:0 0 0 2px rgba(14,17,24,.7)}
 .fr{display:flex;gap:12px;align-items:center;padding:14px}
-.av{width:44px;height:44px;border-radius:99px;display:grid;place-items:center;font-weight:800;color:var(--ink);flex:none;font-family:'Bricolage Grotesque',sans-serif}
-.badge{font-weight:700;font-size:.72rem;padding:.3rem .65rem;border-radius:99px;white-space:nowrap}
-.rail{height:6px;border-radius:9px;background:var(--line);position:relative;margin:14px 6px 6px}
-.rail i{position:absolute;top:-5px;width:16px;height:16px;border-radius:99px;background:var(--accent);transform:translateX(-50%);border:3px solid var(--card);transition:left 1s linear}
+.av{width:44px;height:44px;border-radius:99px;display:grid;place-items:center;font-weight:800;color:var(--ink);flex:none;font-family:'Bricolage Grotesque',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 12px rgba(0,0,0,.3)}
+.badge{font-weight:700;font-size:.72rem;padding:.3rem .65rem;border-radius:99px;white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.12)}
+.rail{height:6px;border-radius:9px;background:rgba(255,255,255,.14);position:relative;margin:14px 6px 6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+.rail i{position:absolute;top:-5px;width:16px;height:16px;border-radius:99px;background:var(--accent);transform:translateX(-50%);border:3px solid rgba(255,255,255,.85);transition:left 1s linear;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 /* map */
 #mapBox{position:relative}
 .mrow{height:56px;display:flex;align-items:center;position:relative}
 .mrow .nm{position:absolute;left:200px;font-size:.92rem;font-weight:600;white-space:nowrap}
 .mrow .tg{position:absolute;left:200px;top:35px;font-size:.62rem;color:var(--mut)}
-.mrow .sd{position:absolute;left:106px;width:14px;height:14px;border-radius:99px;background:var(--bg);border:3px solid var(--mc)}
-.mrail{position:absolute;left:110px;width:6px;background:var(--mc);border-radius:9px;opacity:.85}
-.tr{position:absolute;height:34px;border-radius:13px;background:var(--card2);border:2px solid var(--mc);display:flex;align-items:center;padding:0 6px 0 4px;transform:translateX(-50%);transition:top 1s linear;z-index:5}
-.tr.me{box-shadow:0 0 0 3px #fff}
-.tr b{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:.72rem;color:var(--ink);border:2px solid var(--card2);margin-right:-8px}
+.mrow .sd{position:absolute;left:106px;width:14px;height:14px;border-radius:99px;background:#0b0e13;border:3px solid var(--mc)}
+.mrail{position:absolute;left:110px;width:6px;background:var(--mc);border-radius:9px;opacity:.9;box-shadow:0 0 12px var(--mc)}
+.tr{position:absolute;height:34px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.1)),rgba(20,24,32,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1.5px solid var(--mc);display:flex;align-items:center;padding:0 6px 0 4px;transform:translateX(-50%);transition:top 1s linear;z-index:5;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 14px rgba(0,0,0,.4)}
+.tr.me{box-shadow:0 0 0 3px rgba(255,255,255,.9),0 4px 14px rgba(0,0,0,.4)}
+.tr b{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:.72rem;color:var(--ink);border:2px solid #1b212c;margin-right:-8px}
 .tr b:last-of-type{margin-right:0}
-.tr i{font-style:normal;font-size:.6rem;margin-left:5px;color:var(--mc)}
-.tr small{position:absolute;top:36px;left:50%;transform:translateX(-50%);max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62rem;font-weight:600;background:var(--card);padding:0 4px;border-radius:6px}
-#v-chat{padding-bottom:130px}
+.tr i{font-style:normal;font-size:.6rem;margin-left:5px;color:#fff}
+.tr small{position:absolute;top:37px;left:50%;transform:translateX(-50%);max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62rem;font-weight:700;background:rgba(14,17,24,.75);padding:0 5px;border-radius:7px;border:1px solid rgba(255,255,255,.1)}
+/* chat */
+#v-chat{padding-bottom:120px}
 #msgs{display:flex;flex-direction:column}
-.cm{max-width:82%;align-self:flex-start;background:var(--card2);padding:.55rem .8rem .35rem;border-radius:18px 18px 18px 6px;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere;margin-top:3px}
-.cm.me{align-self:flex-end;background:var(--accent);color:var(--ink);border-radius:18px 18px 6px 18px}
-.ct{font-size:.62rem;opacity:.6;text-align:right;margin-top:1px}
+.cm{max-width:82%;align-self:flex-start;background:var(--glass);border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);padding:.55rem .8rem .35rem;border-radius:20px 20px 20px 6px;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere;margin-top:3px}
+.cm.me{align-self:flex-end;color:#fff;border-radius:20px 20px 6px 20px;border-color:rgba(255,255,255,.28);background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 78%,transparent),color-mix(in srgb,var(--accent) 38%,transparent))}
+.ct{font-size:.62rem;opacity:.65;text-align:right;margin-top:1px}
 .cn{font-size:.72rem;font-weight:700;margin:10px 10px 1px}
-#composer{display:none;position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));z-index:39;background:rgba(11,14,19,.94);backdrop-filter:blur(14px);padding:10px 16px 8px;border-top:1px solid var(--line)}
+#composer{display:none;position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom));z-index:39;padding:0 14px}
 #composer.on{display:block}
-#composer>div{max-width:480px;margin:0 auto}
-.chip{white-space:nowrap;font-size:.8rem;font-weight:600;padding:.4rem .8rem;border-radius:99px;background:var(--card2);border:1px solid var(--line)}
-#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#000;padding:.65rem 1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;display:flex;gap:12px;align-items:center;white-space:nowrap}
+#composer>div{max-width:452px;margin:0 auto;padding:10px;border-radius:28px;border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);box-shadow:var(--hl),0 14px 36px rgba(0,0,0,.4);background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.05)),rgba(14,17,24,.4)}
+#chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{white-space:nowrap;font-size:.76rem;font-weight:600;padding:.36rem .75rem;border-radius:99px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+.chip:active{background:rgba(255,255,255,.22)}
+#toast{position:fixed;left:50%;bottom:calc(98px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(28,34,46,.72);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);color:#fff;border:1px solid rgba(255,255,255,.2);box-shadow:var(--hl),0 10px 30px rgba(0,0,0,.4);padding:.65rem 1.1rem;border-radius:99px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;display:flex;gap:12px;align-items:center;white-space:nowrap}
 #toast.show{opacity:1;pointer-events:auto}
-#toast button{font-weight:800;color:#2563eb}
-#onb{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;align-items:center}
+#toast button{font-weight:800;color:#93c5fd}
+#onb{position:fixed;inset:0;z-index:80;background:rgba(7,9,13,.4);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);display:none;align-items:center}
 #onb.open{display:flex}
 </style>
 </head>
@@ -101,10 +125,10 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
     <div id="hero" class="hero"></div>
     <button id="eta" class="card w-full p-4 text-left hidden"></button>
     <div class="grid2">
-      <button id="bBoard" class="act" style="background:#22c55e;color:#04210f"><b>Boarded train</b><span>Pick line, direction, station</span></button>
-      <button id="bNext" class="act" style="background:var(--accent);color:var(--ink)"><b>Next station</b><span>Move one stop along</span></button>
-      <button id="bOff" class="act card" style="border-radius:24px"><b>Train ahead / behind</b><span class="mut">Fix your schedule shift</span></button>
-      <button id="bEnd" class="act" style="background:#2a1417;color:#fca5a5;border:1px solid #4a1d22"><b>Got off</b><span>End your trip</span></button>
+      <button id="bBoard" class="act gl-green"><b>Boarded train</b><span>Pick line, direction, station</span></button>
+      <button id="bNext" class="act gl-acc"><b>Next station</b><span>Move one stop along</span></button>
+      <button id="bOff" class="act card"><b>Train ahead / behind</b><span class="mut">Fix your schedule shift</span></button>
+      <button id="bEnd" class="act gl-red"><b>Got off</b><span>End your trip</span></button>
     </div>
     <button id="bPos" class="card w-full p-4 flex items-center justify-between text-left">
       <div><div class="font-bold">Set exact location</div><div class="text-sm mut">I'm at a station / coming up next</div></div>
@@ -139,15 +163,15 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
 </div>
 
 <div id="composer"><div>
-  <div id="chips" class="flex gap-2 overflow-x-auto pb-2"></div>
-  <div class="flex gap-2"><input id="msgIn" maxlength="300" placeholder="Message your room…" autocomplete="off"><button id="send" class="px-5 rounded-2xl font-extrabold" style="background:var(--accent);color:var(--ink)">Send</button></div>
+  <div id="chips"></div>
+  <div class="flex gap-2"><input id="msgIn" maxlength="300" placeholder="Message your room…" autocomplete="off"><button id="send" class="px-5 rounded-2xl font-extrabold gl-acc" style="border:1px solid rgba(255,255,255,.25);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)">Send</button></div>
 </div></div>
 
 <nav><div>
-  <button data-v="ride" class="on">Ride</button>
-  <button data-v="map">Live map</button>
-  <button data-v="friends">Friends<em id="cnt" class="hidden"></em></button>
-  <button data-v="chat">Chat<em id="ccnt" class="hidden"></em></button>
+  <button data-v="ride" class="on"><span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 11h14M8.5 21l1.8-4M15.5 21l-1.8-4"/><circle cx="9" cy="14" r=".6"/><circle cx="15" cy="14" r=".6"/></svg></span>Ride</button>
+  <button data-v="map"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M8.2 6H14a3.2 3.2 0 0 1 0 6.4H10a3.2 3.2 0 0 0 0 6.4h5.8"/></svg></span>Live map</button>
+  <button data-v="friends"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 5"/></svg><em id="cnt" class="hidden"></em></span>Friends</button>
+  <button data-v="chat"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><em id="ccnt" class="hidden"></em></span>Chat</button>
 </div></nav>
 
 <div id="sh" class="sheet"><div><div class="grab"></div><h2 id="shT" class="d text-xl font-extrabold mb-3"></h2><div id="shB"></div>
@@ -426,7 +450,7 @@ $('bOff').onclick=()=>{
   if(!trip)return openBoard();
   const draw=()=>{
     sheet('Train ahead / behind',`<p class="text-sm mut mb-4">Running earlier or later than the train you checked in on? Shift by whole trains (about ${HEADWAY} min each).</p>
-     <div class="grid2"><button id="oB" class="act" style="background:#78350f;color:#fcd34d"><b>1 train behind</b><span>I missed one</span></button><button id="oA" class="act" style="background:#1e3a8a;color:#93c5fd"><b>1 train ahead</b><span>I caught an earlier one</span></button></div>
+     <div class="grid2"><button id="oB" class="act gl-amber"><b>1 train behind</b><span>I missed one</span></button><button id="oA" class="act gl-blue"><b>1 train ahead</b><span>I caught an earlier one</span></button></div>
      <div class="text-center d text-xl font-extrabold mt-4">${!trip.offset?'No shift':trip.offset>0?trip.offset+' ahead':-trip.offset+' behind'}</div>
      <button id="oR" class="w-full mt-3 py-3 rounded-2xl card font-semibold">Reset to 0</button>`);
     const set=d=>{trip.offset=d===0?0:(trip.offset||0)+d;persist();push();vib();render();draw()};
