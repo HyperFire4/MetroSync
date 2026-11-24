@@ -82,6 +82,7 @@ nav em{position:absolute;top:4px;right:22%;font-style:normal;font-size:.65rem;ba
   <!-- RIDE -->
   <section id="v-ride" class="space-y-4">
     <div id="hero" class="hero"></div>
+    <button id="eta" class="card w-full p-4 text-left hidden"></button>
     <div class="grid2">
       <button id="bBoard" class="act" style="background:#22c55e;color:#04210f"><b>Boarded train</b><span>Pick line, direction, station</span></button>
       <button id="bNext" class="act" style="background:var(--accent);color:var(--ink)"><b>Next station</b><span>Move one stop along</span></button>
@@ -186,19 +187,21 @@ function live(u,now=Date.now()){
   const el=(now-u.ts)/60000,dw=u.mode==='next'?0:DWELL;
   let m=c[u.idx]-(u.mode==='next'?sg*0.6:0)+sg*Math.max(0,el-dw);
   m=Math.min(tot,Math.max(0,m));
-  if(sg>0?m>=tot:m<=0){const i=sg>0?n-1:0;return{f:i,at:true,term:true,idx:i}}
-  if(u.mode!=='next'&&el<dw)return{f:u.idx,at:true,idx:u.idx};
+  if(sg>0?m>=tot:m<=0){const i=sg>0?n-1:0;return{f:i,at:true,term:true,idx:i,m}}
+  if(u.mode!=='next'&&el<dw)return{f:u.idx,at:true,idx:u.idx,m};
   let i=0;while(i<n-2&&c[i+1]<=m)i++;
-  return{f:i+(m-c[i])/(c[i+1]-c[i]),prev:sg>0?i:i+1,next:sg>0?i+1:i,secs:(sg>0?c[i+1]-m:m-c[i])*60};
+  return{m,f:i+(m-c[i])/(c[i+1]-c[i]),prev:sg>0?i:i+1,next:sg>0?i+1:i,secs:(sg>0?c[i+1]-m:m-c[i])*60};
 }
 const liveText=(u,li)=>{const s=LINES[u.line].stations;return li.term?'Reached '+s[li.idx]:li.at?'At '+s[li.idx]:s[li.prev]+' → '+s[li.next]};
 const eta=s=>s<15?'Arriving':`~${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const originTime=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*HEADWAY*60000;
-function compare(f){
+function compare(t,mt){
   if(!trip)return['Start a trip to compare','#262e3b','#8a95a8'];
-  if(f.line!==trip.line||f.dir!==trip.dir)return[f.line!==trip.line?'Other line':'Opposite way','#262e3b','#8a95a8'];
-  const n=Math.round((originTime(f)-originTime(trip))/(HEADWAY*60000));
-  return n===0?['Same train','#14532d','#86efac']:n<0?[`${-n} train${-n>1?'s':''} ahead`,'#1e3a8a','#93c5fd']:[`${n} train${n>1?'s':''} behind`,'#78350f','#fcd34d'];
+  if(t.line!==trip.line||t.dir!==trip.dir)return[t.line!==trip.line?'Other line':'Opposite way','#262e3b','#8a95a8'];
+  mt=mt||{avg:originTime(trip)};
+  if(t===mt)return['Same train','#14532d','#86efac'];
+  const n=Math.max(1,Math.round(Math.abs(t.avg-mt.avg)/(HEADWAY*60000))),ahead=t.avg<mt.avg;
+  return ahead?[`${n} train${n>1?'s':''} ahead`,'#1e3a8a','#93c5fd']:[`${n} train${n>1?'s':''} behind`,'#78350f','#fcd34d'];
 }
 
 /* ---------- Sync (Firebase, with local fallback) ---------- */
@@ -232,15 +235,15 @@ function riders(){const now=Date.now();return Object.entries(users).filter(([id,
 function render(){
   const ln=trip?trip.line:S.line;document.body.style.setProperty('--accent',LINES[ln].color);
   $('roomTxt').textContent=S.room||'Join';
-  renderHero();renderFriends();renderMapStatic();
+  renderHero();renderEta();renderFriends();renderMapStatic();
 }
 function renderHero(){
   const h=$('hero');
   if(!trip){h.innerHTML=`<span class="pill">Not riding</span><div class="d text-3xl font-extrabold mt-3 leading-tight">Where are you headed, ${esc(S.name||'friend')}?</div><p class="mut mt-2 text-sm">Tap “Boarded train” when you get on and your friends will see you instantly.</p>`;return}
-  const l=LINES[trip.line],li=live(trip),st=l.stations;
+  const l=LINES[trip.line],li=myLive(),st=l.stations;
   const main=li.term?st[li.idx]:li.at?st[li.idx]:st[li.next];
   const lab=li.term?'You have reached':li.at?'At station':'Next station';
-  const sub=li.term?'Tap “Got off” when you leave the train':li.at?'Doors open · next stop '+(st[trip.idx+(trip.dir==='up'?1:-1)]||'—'):'Just left '+st[li.prev];
+  const sub=li.term?'Tap “Got off” when you leave the train':li.at?'Doors open · next stop '+(st[li.idx+(trip.dir==='up'?1:-1)]||'—'):'Just left '+st[li.prev];
   const pct=li.f/(st.length-1)*100;
   h.innerHTML=`<div class="flex items-center justify-between"><span class="pill" style="color:var(--accent)">${esc(l.name)}</span><span class="pill">→ ${esc(dirName(trip.line,trip.dir))}</span></div>
    <div class="text-sm mut mt-4">${lab}</div>
@@ -255,18 +258,40 @@ function renderFriends(){
   const idle=all.filter(u=>!rs.some(r=>r.u===u)).map(u=>esc(u.name||'?'));
   $('roomInfo').innerHTML=S.room?`${all.length} in room “${esc(S.room)}” · ${rs.length} riding${idle.length?' · Not riding: '+idle.join(', '):''}`:'';
   const c=$('cnt');c.textContent=rs.length;c.classList.toggle('hidden',!rs.length);
-  if(!rs.length){$('board').innerHTML=`<div class="card p-6 text-center text-sm mut">No one is riding yet.<br>Tap Invite in the room menu to share the link.</div>`;return}
-  const now=Date.now(),mine=trip?live(trip,now):null;
+  if(!rs.length){$('board').innerHTML=`<div class="card p-6 text-center text-sm mut">No one is riding yet.<br>Tap the room name (top right), then Invite, to share the link.</div>`;return}
+  const tm=trainMap(),mt=tm.by[S.uid];
   $('board').innerHTML=rs.map(({id,u})=>{
-    const me=id===S.uid,l=LINES[u.line],li=live(u,now),[t,bg,fg]=me?['You','#262e3b','#eef1f6']:compare(u);
+    const me=id===S.uid,l=LINES[u.line],t=tm.by[id],li=t.li;
+    const [txt,bg,fg]=me?['You','#262e3b','#eef1f6']:compare(t,mt);
+    const others=t.m.filter(x=>x.id!==id).map(nm);
     let apart='';
-    if(!me&&mine&&trip.line===u.line&&trip.dir===u.dir){const d=li.f-mine.f,k=Math.round(Math.abs(d));if(k>0)apart=`<div class="text-xs mut mt-1 text-right">≈${k} stop${k>1?'s':''} ${d*(u.dir==='up'?1:-1)>0?'ahead':'behind'}</div>`}
+    if(!me&&mt&&t!==mt&&t.line===mt.line&&t.dir===mt.dir){const d=li.f-mt.li.f,k=Math.round(Math.abs(d));if(k>0)apart=`<div class="text-xs mut mt-1 text-right">≈${k} stop${k>1?'s':''} ${d*(u.dir==='up'?1:-1)>0?'ahead':'behind'}</div>`}
     return `<div class="card fr"><div class="av" style="background:${hue(u.name)}">${esc(u.name[0]||'?').toUpperCase()}</div>
-     <div class="min-w-0 flex-1"><div class="font-bold">${esc(u.name)}</div><div class="d font-extrabold text-lg leading-tight">${esc(liveText(u,li))}</div>
+     <div class="min-w-0 flex-1"><div class="font-bold">${esc(u.name)}${others.length?` <span class="mut text-xs font-normal">· with ${esc(others.join(', '))}</span>`:''}</div><div class="d font-extrabold text-lg leading-tight">${esc(liveText(t.lead.u,li))}</div>
      <div class="text-xs mut mt-1 truncate" style="color:${l.color}">${esc(l.name)} → ${esc(dirName(u.line,u.dir))} <span class="mut">· ${ago(u.ts)}</span></div></div>
-     <div><span class="badge" style="background:${bg};color:${fg}">${esc(t)}</span>${apart}</div></div>`;
+     <div><span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>${apart}</div></div>`;
   }).join('');
 }
+
+/* ---------- "Reaching X in …" bar ---------- */
+function renderEta(){
+  const el=$('eta');if(!trip){el.classList.add('hidden');return}
+  el.classList.remove('hidden');
+  const l=LINES[trip.line],c=l.cum,sg=trip.dir==='up'?1:-1,n=c.length,li=myLive();
+  const dest=trip.dest!=null?trip.dest:(sg>0?n-1:0),from=trip.from!=null?trip.from:trip.idx;
+  const rem=Math.max(0,sg>0?c[dest]-li.m:li.m-c[dest]),total=Math.max(.1,Math.abs(c[dest]-c[from]));
+  const pct=Math.min(100,Math.max(0,(1-rem/total)*100)),done=rem<=0.05;
+  el.innerHTML=`<div class="flex items-center justify-between gap-3"><div class="font-bold">${done?'Reached':'Reaching'} ${esc(l.stations[dest])}${done?'':' in <span style="color:var(--accent)">'+fmtDur(rem)+'</span>'}</div><span class="tag">Change</span></div>
+   <div class="rail" style="margin:12px 0 6px"><div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:var(--accent);border-radius:9px;transition:width 1s linear"></div></div>
+   <div class="flex justify-between text-xs mut"><span>${esc(l.stations[from])}</span><span>${done?'':'about '+fmtT(Date.now()+rem*60000)}</span></div>`;
+}
+$('eta').onclick=()=>{
+  if(!trip)return;const li=myLive(),sg=trip.dir==='up'?1:-1,n=LINES[trip.line].stations.length;
+  const dest=trip.dest!=null?trip.dest:(sg>0?n-1:0);
+  const ahead=order(trip.line,trip.dir).filter(i=>(i-li.f)*sg>0.001);
+  sheet('Where are you getting off?',stRows(trip.line,ahead,dest));
+  $('shB').querySelectorAll('.st').forEach(b=>b.onclick=()=>{trip.dest=+b.dataset.i;persist();push();closeSheet();vib();render()});
+};
 
 /* ---------- Live map ---------- */
 function renderMapStatic(){
@@ -282,20 +307,23 @@ function renderMapStatic(){
    and estimated departure time from the terminus within TRAIN_GAP minutes). */
 function trains(rs,now){
   const out=[];
-  ['up','down'].forEach(d=>{
-    const a=rs.filter(r=>r.u.dir===d).map(r=>({...r,ot:originTime(r.u)})).sort((x,y)=>x.ot-y.ot);
+  Object.keys(LINES).forEach(k=>['up','down'].forEach(d=>{
+    const a=rs.filter(r=>r.u.line===k&&r.u.dir===d).map(r=>({...r,ot:originTime(r.u)})).sort((x,y)=>x.ot-y.ot);
     let g=null;
     a.forEach(r=>{
       if(g&&Math.abs(r.ot-g.avg)<=TRAIN_GAP*60000){g.m.push(r);g.avg=g.m.reduce((s,x)=>s+x.ot,0)/g.m.length}
       else{g={m:[r],avg:r.ot};out.push(g)}
     });
-  });
+  }));
   return out.map(g=>{
     const lead=g.m.reduce((p,c)=>c.u.ts>p.u.ts?c:p);          // freshest check-in = best position fix
-    return{m:g.m,lead,dir:lead.u.dir,li:live(lead.u,now),key:lead.u.dir+'|'+g.m.map(x=>x.id).sort().join(',')};
+    return{m:g.m,lead,avg:g.avg,line:lead.u.line,dir:lead.u.dir,li:live(lead.u,now),key:lead.u.line+lead.u.dir+'|'+g.m.map(x=>x.id).sort().join(',')};
   });
 }
 const nm=(x)=>x.id===S.uid?'You':x.u.name;
+function trainMap(){const now=Date.now(),ts=trains(riders(),now),by={};ts.forEach(t=>t.m.forEach(x=>by[x.id]=t));return{ts,by,now}}
+const myLive=()=>{const t=trainMap().by[S.uid];return t&&t.line===trip.line&&t.dir===trip.dir?t.li:live(trip)};   // freshest fix from anyone on my train
+const fmtDur=min=>{const m=Math.ceil(min);return m<1?'under 1 min':m<60?m+' min':Math.floor(m/60)+' hr '+(m%60)+' min'};
 function updateMarkers(){
   const box=$('mapBox');if(!box)return;const now=Date.now(),seen={};
   const ts=trains(riders().filter(r=>r.u.line===S.mapLine),now);
@@ -314,7 +342,7 @@ function updateMarkers(){
   const mine=ts.find(t=>t.m.some(x=>x.id===S.uid));
   if(view==='map'&&!mapScrolled&&mine&&markers[mine.key]){mapScrolled=true;markers[mine.key].scrollIntoView({block:'center'})}
 }
-setInterval(()=>{tickN++;if(trip)renderHero();updateMarkers();if(tickN%5===0)renderFriends()},1000);
+setInterval(()=>{tickN++;if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends()},1000);
 
 /* ---------- Tabs, sheets, toast ---------- */
 function show(v){view=v;['ride','map','friends'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();scrollTo(0,0)}
@@ -336,7 +364,7 @@ function openBoard(){
     $('shB').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{bl=b.dataset.l;draw()});
     $('shB').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{bd=b.dataset.d;draw()});
     $('shB').querySelectorAll('.st').forEach(b=>b.onclick=()=>{
-      S.line=bl;S.dir=bd;S.mapLine=bl;trip={line:bl,dir:bd,idx:+b.dataset.i,ts:Date.now(),offset:0,mode:'at'};
+      S.line=bl;S.dir=bd;S.mapLine=bl;trip={line:bl,dir:bd,idx:+b.dataset.i,from:+b.dataset.i,dest:null,ts:Date.now(),offset:0,mode:'at'};
       persist();push();closeSheet();vib();render();toast('Checked in at '+LINES[bl].stations[+b.dataset.i]+' · '+fmtT(trip.ts));mapScrolled=false;
     });
   };draw();
@@ -345,7 +373,7 @@ function setPos(i,mode){trip.idx=i;trip.mode=mode;trip.ts=Date.now();persist();p
 $('bBoard').onclick=openBoard;
 $('bNext').onclick=()=>{
   if(!trip)return openBoard();
-  const li=live(trip),sg=trip.dir==='up'?1:-1,n=li.term?null:li.at?trip.idx+sg:li.next;
+  const li=myLive(),sg=trip.dir==='up'?1:-1,n=li.term?null:li.at?li.idx+sg:li.next;
   if(n==null||n<0||n>=LINES[trip.line].stations.length)return toast('You are at the final station');
   setPos(n,'at');
 };
