@@ -134,7 +134,7 @@ nav em{position:absolute;top:-5px;right:-10px;font-style:normal;font-size:.62rem
       <div><div class="font-bold">Set exact location</div><div class="text-sm mut">I'm at a station / coming up next</div></div>
       <span class="mut text-xl">›</span>
     </button>
-    <p class="text-xs text-center mut px-4">Positions between taps are estimated from schedule times (~2–3 min per stop, a train every ~<span id="hw"></span> min). Tap “Next station” at each stop to keep it accurate.</p>
+    <p class="text-xs text-center mut px-4">Positions between taps are estimated from schedule times (about 2–3 min per stop plus ~10 s waiting at each station, a train every ~<span id="hw"></span> min). Tap “Next station” at each stop to keep it accurate.</p>
   </section>
 
   <!-- MAP -->
@@ -204,7 +204,7 @@ const FIREBASE_CONFIG = {
 };
 
 /* ---------- Data ("up" = toward LAST station, "down" = toward FIRST) ---------- */
-const HEADWAY=8, STALE_MIN=45, DWELL=0.4, ROW=56, TRAIN_GAP=3; // riders whose train left the terminus within TRAIN_GAP min are "on the same train"
+const HEADWAY=8, STALE_MIN=45, STOP_SEC=10, DWELL=STOP_SEC/60, ROW=56, TRAIN_GAP=3;   // STOP_SEC = extra seconds the train waits at every station // riders whose train left the terminus within TRAIN_GAP min are "on the same train"
 const LINES={
  r7:{name:'Red Line 7',color:'#ef4444',
   stations:['Kashigaon','Miragaon','Pandurangwadi','Dahisar East','Ovaripada','National Park','Devipada','Magathane','Poisar','Akurli','Kurar','Dindoshi','Aarey','Goregaon East','Jogeshwari East','Mogra','Gundavali'],
@@ -215,7 +215,7 @@ const LINES={
   mins:[2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2],
   x:{0:'Line 7 · Line 9',16:'Line 1'}}
 };
-for(const k in LINES){const c=[0];LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m));LINES[k].cum=c;}
+for(const k in LINES){const c=[0];LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m+STOP_SEC/60));LINES[k].cum=c;}
 
 /* ---------- Helpers & state ---------- */
 const $=id=>document.getElementById(id);
