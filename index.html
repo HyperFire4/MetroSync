@@ -134,6 +134,7 @@ nav em{position:absolute;top:-5px;right:-10px;font-style:normal;font-size:.62rem
       <div><div class="font-bold">Set exact location</div><div class="text-sm mut">I'm at a station / coming up next</div></div>
       <span class="mut text-xl">›</span>
     </button>
+    <div id="svc" class="card p-4 text-sm"></div>
     <p class="text-xs text-center mut px-4">Positions between taps are estimated from schedule times (about 2–3 min per stop plus ~10 s waiting at each station, a train every ~<span id="hw"></span> min). Tap “Next station” at each stop to keep it accurate.</p>
   </section>
 
@@ -204,15 +205,25 @@ const FIREBASE_CONFIG = {
 };
 
 /* ---------- Data ("up" = toward LAST station, "down" = toward FIRST) ---------- */
-const HEADWAY=8, STALE_MIN=45, STOP_SEC=10, DWELL=STOP_SEC/60, ROW=56, TRAIN_GAP=3;   // STOP_SEC = extra seconds the train waits at every station // riders whose train left the terminus within TRAIN_GAP min are "on the same train"
+const STALE_MIN=45, STOP_SEC=10, DWELL=STOP_SEC/60, ROW=56;   // STOP_SEC = extra seconds the train waits at every station
+/* Official service pattern: MMRDA timetable effective 8 Apr 2026 (Lines 2A, 7+9).
+   first/last are minutes after midnight; peak/off = minutes between trains.
+   PEAKS are NOT published by MMRDA: Mon–Fri 8–11 am and 5–9 pm is my assumption, edit if you know better. */
+const SERVICE={
+  r7:{first:350,last:1380,peak:5.83,off:9,firstTxt:'5:50 AM',lastTxt:'11:00 PM'},
+  y2a:{first:350,last:1380,peak:6,off:9,firstTxt:'5:50 AM',lastTxt:'10:35–11:00 PM'}
+};
+const PEAKS=[[8,11],[17,21]];
+const isPeak=d=>{const h=d.getHours()+d.getMinutes()/60,w=d.getDay();return w>=1&&w<=5&&PEAKS.some(([a,b])=>h>=a&&h<b)};
+const hwAt=(line,ts=Date.now())=>{const d=new Date(ts);return SERVICE[line][isPeak(d)?'peak':'off']};   // minutes between trains at that moment
 const LINES={
  r7:{name:'Red Line 7',color:'#ef4444',
   stations:['Kashigaon','Miragaon','Pandurangwadi','Dahisar East','Ovaripada','National Park','Devipada','Magathane','Poisar','Akurli','Kurar','Dindoshi','Aarey','Goregaon East','Jogeshwari East','Mogra','Gundavali'],
-  mins:[2,3,3, 3,2,3,2,2,3,2,2,3,2,3,2,2],
+  mins:[2,3,3, 3.2,2.1,3.2,2.1,2.1,3.2,2.1,2.1,3.2,2.1,3.2,2.1,2.1],   // Dahisar East → Gundavali totals ~35 min with stops; the 3 Line 9 gaps are my estimate
   x:{3:'Line 2A · Line 9',16:'Line 1'}},
  y2a:{name:'Yellow Line 2A',color:'#facc15',
   stations:['Dahisar East','Anand Nagar','Kandarpada','Mandapeshwar','Eksar','Borivali West','Pahadi Eksar','Kandivali West','Dahanukarwadi','Valnai','Malad West','Lower Malad','Pahadi Goregaon','Goregaon West','Oshiwara','Lower Oshiwara','Andheri West'],
-  mins:[2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2],
+  mins:[2.3,2.3,2.3,2.3,2.8,2.3,2.3,2.3,2.3,2.3,2.3,2.3,2.3,2.3,2.3,2.3],   // whole line totals ~40 min with stops
   x:{0:'Line 7 · Line 9',16:'Line 1'}}
 };
 for(const k in LINES){const c=[0];LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m+STOP_SEC/60));LINES[k].cum=c;}
@@ -249,13 +260,13 @@ function live(u,now=Date.now()){
 }
 const liveText=(u,li)=>{const s=LINES[u.line].stations;return li.term?'Reached '+s[li.idx]:li.at?'At '+s[li.idx]:s[li.prev]+' → '+s[li.next]};
 const eta=s=>s<15?'Arriving':`~${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-const originTime=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*HEADWAY*60000;
+const originTime=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*hwAt(u.line,u.ts)*60000;
 function compare(t,mt){
   if(!trip)return['Start a trip to compare','#262e3b','#8a95a8'];
   if(t.line!==trip.line||t.dir!==trip.dir)return[t.line!==trip.line?'Other line':'Opposite way','#262e3b','#8a95a8'];
   mt=mt||{avg:originTime(trip)};
   if(t===mt)return['Same train','#14532d','#86efac'];
-  const n=Math.max(1,Math.round(Math.abs(t.avg-mt.avg)/(HEADWAY*60000))),ahead=t.avg<mt.avg;
+  const n=Math.max(1,Math.round(Math.abs(t.avg-mt.avg)/(hwAt(trip.line)*60000))),ahead=t.avg<mt.avg;
   return ahead?[`${n} train${n>1?'s':''} ahead`,'#1e3a8a','#93c5fd']:[`${n} train${n>1?'s':''} behind`,'#78350f','#fcd34d'];
 }
 
@@ -292,7 +303,7 @@ function riders(){const now=Date.now();return Object.entries(users).filter(([id,
 function render(){
   const ln=trip?trip.line:S.line;document.body.style.setProperty('--accent',LINES[ln].color);
   $('roomTxt').textContent=S.room||'Join';
-  renderHero();renderEta();renderFriends();renderMapStatic();
+  renderHero();renderEta();renderFriends();renderMapStatic();renderSvc();
 }
 function renderHero(){
   const h=$('hero');
@@ -330,6 +341,18 @@ function renderFriends(){
   }).join('');
 }
 
+/* ---------- Service hours & frequency (MMRDA timetable) ---------- */
+function renderSvc(){
+  const ln=trip?trip.line:S.line,c=SERVICE[ln],l=LINES[ln],d=new Date(),m=d.getHours()*60+d.getMinutes();
+  const open=m>=c.first&&m<=c.last,peak=isPeak(d);
+  $('svc').innerHTML=`<div class="flex items-center justify-between gap-2"><div class="font-bold" style="color:${l.color}">${esc(l.name)} service</div>
+    <span class="badge" style="background:${open?'rgba(34,197,94,.22)':'rgba(239,68,68,.25)'};color:${open?'#86efac':'#fca5a5'}">${open?'Running':'Closed now'}</span></div>
+   <div class="mt-2">${open?(peak?'Peak hours':'Off-peak')+' · a train every ~'+Math.round(c[peak?'peak':'off'])+' min':'Next first train at '+c.firstTxt}</div>
+   <div class="mut text-xs mt-1">First train ${c.firstTxt} · last train ${c.lastTxt}</div>
+   <div class="mut text-xs mt-2">Source: MMRDA timetable effective 8 April 2026. Peak hours are assumed Mon–Fri 8–11 am and 5–9 pm.</div>`;
+  $('hw').textContent=Math.round(c[peak?'peak':'off']);
+}
+
 /* ---------- "Reaching X in …" bar ---------- */
 function etaBar(u,li,tag){
   const l=LINES[u.line],c=l.cum,sg=u.dir==='up'?1:-1,n=c.length;
@@ -363,14 +386,14 @@ function renderMapStatic(){
   markers={};updateMarkers();
 }
 /* Group riders who are on the same physical train (same line, same direction,
-   and estimated departure time from the terminus within TRAIN_GAP minutes). */
+   and estimated departure time from the terminus within 40% of the train interval of each other). */
 function trains(rs,now){
   const out=[];
   Object.keys(LINES).forEach(k=>['up','down'].forEach(d=>{
     const a=rs.filter(r=>r.u.line===k&&r.u.dir===d).map(r=>({...r,ot:originTime(r.u)})).sort((x,y)=>x.ot-y.ot);
     let g=null;
     a.forEach(r=>{
-      if(g&&Math.abs(r.ot-g.avg)<=TRAIN_GAP*60000){g.m.push(r);g.avg=g.m.reduce((s,x)=>s+x.ot,0)/g.m.length}
+      if(g&&Math.abs(r.ot-g.avg)<=0.4*hwAt(k,r.u.ts)*60000){g.m.push(r);g.avg=g.m.reduce((s,x)=>s+x.ot,0)/g.m.length}
       else{g={m:[r],avg:r.ot};out.push(g)}
     });
   }));
@@ -401,7 +424,7 @@ function updateMarkers(){
   const mine=ts.find(t=>t.m.some(x=>x.id===S.uid));
   if(view==='map'&&!mapScrolled&&mine&&markers[mine.key]){mapScrolled=true;markers[mine.key].scrollIntoView({block:'center'})}
 }
-setInterval(()=>{tickN++;if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends()},1000);
+setInterval(()=>{tickN++;if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends();if(tickN%30===0)renderSvc()},1000);
 
 /* ---------- Tabs, sheets, toast ---------- */
 function show(v){view=v;$('composer').classList.toggle('on',v==='chat');['ride','map','friends','chat'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();if(v==='chat'){forceScroll=true;renderChat()}else scrollTo(0,0)}
@@ -449,7 +472,7 @@ $('bPos').onclick=()=>{
 $('bOff').onclick=()=>{
   if(!trip)return openBoard();
   const draw=()=>{
-    sheet('Train ahead / behind',`<p class="text-sm mut mb-4">Running earlier or later than the train you checked in on? Shift by whole trains (about ${HEADWAY} min each).</p>
+    sheet('Train ahead / behind',`<p class="text-sm mut mb-4">Running earlier or later than the train you checked in on? Shift by whole trains (about ${Math.round(hwAt(trip.line))} min apart right now).</p>
      <div class="grid2"><button id="oB" class="act gl-amber"><b>1 train behind</b><span>I missed one</span></button><button id="oA" class="act gl-blue"><b>1 train ahead</b><span>I caught an earlier one</span></button></div>
      <div class="text-center d text-xl font-extrabold mt-4">${!trip.offset?'No shift':trip.offset>0?trip.offset+' ahead':-trip.offset+' behind'}</div>
      <button id="oR" class="w-full mt-3 py-3 rounded-2xl card font-semibold">Reset to 0</button>`);
@@ -543,7 +566,7 @@ $('roomChip').onclick=()=>{
 };
 
 /* ---------- Init ---------- */
-$('hw').textContent=HEADWAY;
+renderSvc();
 const inv=new URLSearchParams(location.search).get('room');
 if(inv&&!S.room){S.room=inv;if(S.name)persist()}
 persist();connect();render();renderChat();renderInstall();
