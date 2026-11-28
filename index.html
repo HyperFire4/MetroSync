@@ -228,6 +228,65 @@ const LINES={
 };
 for(const k in LINES){const c=[0];LINES[k].mins.forEach(m=>c.push(c[c.length-1]+m+STOP_SEC/60));LINES[k].cum=c;}
 
+/* ---------- GPS (hybrid): snap phone fixes onto the line; schedule estimate is the fallback ---------- */
+/* Verified station coordinates [lat,lng] by station index (Wikipedia infoboxes). Paste more here to skip calibration.
+   Stations not listed are learned from riders' check-ins made with a good GPS fix and shared in the room (rooms/<room>/geo). */
+const GEO={r7:{16:[19.11502,72.85517],15:[19.12885,72.85536]},y2a:{}};   // 16 = Gundavali, 15 = Mogra
+const GPS_TOL=600, GPS_ACC=80, GPS_FRESH=30000, KX=105200, KY=110900;   // metres per degree lng/lat near Mumbai
+let geoRoom={},gref=null,wid=null,wl=null,lastFix=null,lastPush=0,gpsInfo='';
+const pt=(k,i)=>{const g=GEO[k][i];if(g)return g;const o=geoRoom[k]&&geoRoom[k][i];return o?[o.la,o.ln]:null};
+const known=k=>LINES[k].stations.filter((_,i)=>pt(k,i)).length;
+function snap(k,lat,lng){   // nearest point on the line -> position in schedule minutes (same unit as cum)
+  const c=LINES[k].cum;let best=null;
+  for(let i=0;i<c.length-1;i++){
+    const a=pt(k,i),b=pt(k,i+1);if(!a||!b)continue;
+    const bx=(b[1]-a[1])*KX,by=(b[0]-a[0])*KY,px=(lng-a[1])*KX,py=(lat-a[0])*KY,L=bx*bx+by*by;
+    const t=L?Math.max(0,Math.min(1,(px*bx+py*by)/L)):0,d=Math.hypot(px-t*bx,py-t*by);
+    if(!best||d<best.d)best={d,m:c[i]+t*(c[i+1]-c[i])};
+  }
+  return best&&best.d<=GPS_TOL?best:null;
+}
+const gpsOf=u=>u.g&&u.g.ts>u.ts?u.g:null;   // a GPS fix newer than the last manual check-in
+function onFix(p){
+  const {latitude:la,longitude:ln,accuracy:ac}=p.coords;lastFix={la,ln,ac,ts:Date.now()};
+  if(!trip)return;
+  if(ac>GPS_ACC){gpsInfo='weak';return}
+  const sn=snap(trip.line,la,ln);
+  if(!sn){gpsInfo=known(trip.line)<2?'learn':'off';return}
+  trip.g={m:sn.m,ts:Date.now(),ac:Math.round(ac)};gpsInfo='live';   // only the position along the line is shared, never raw coordinates
+  if(Date.now()-lastPush>4000){lastPush=Date.now();persist();push()}
+}
+function reqWake(){try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>wl=l).catch(()=>{})}catch(e){}}
+function startGps(){
+  if(wid!=null||!navigator.geolocation)return;
+  wid=navigator.geolocation.watchPosition(onFix,e=>{gpsInfo=e.code===1?'denied':'weak'},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});reqWake();
+}
+function stopGps(){
+  if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}
+  try{wl&&wl.release()}catch(e){}wl=null;lastFix=null;gpsInfo='';
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&wid!=null)reqWake()});
+function toggleGps(){
+  S.gps=!S.gps;persist();
+  if(S.gps&&!navigator.geolocation)toast('This browser has no location support');
+  else toast(S.gps?'GPS on. Your screen stays awake while you ride':'GPS off. Using the schedule estimate');
+  if(S.gps&&trip)startGps();else stopGps();renderHero();
+}
+function learn(){   // called right after a station check-in: the phone is at that station, so remember where it is
+  if(!trip||trip.mode!=='at'||!lastFix||Date.now()-lastFix.ts>15000||lastFix.ac>40)return;
+  const k=trip.line,i=trip.idx;if(GEO[k][i])return;
+  const o=geoRoom[k]&&geoRoom[k][i],n=o?Math.min(o.n||1,8):0,v=o?{la:(o.la*n+lastFix.la)/(n+1),ln:(o.ln*n+lastFix.ln)/(n+1),n:n+1}:{la:lastFix.la,ln:lastFix.ln,n:1};
+  (geoRoom[k]=geoRoom[k]||{})[i]=v;
+  if(fbReady&&db)db.ref(roomPath()+'/geo/'+k+'/'+i).set(v).catch(()=>{});else sv('ms_geo_'+roomPath(),geoRoom);
+}
+const gpsLine=li=>{
+  const b=`<button class="underline" onpointerdown="toggleGps()">${S.gps?'Turn off GPS':'Turn on GPS'}</button>`;
+  if(!S.gps)return 'Estimated · '+b;
+  if(li.src==='gps')return `GPS live · ±${trip.g.ac} m · `+b;
+  const why={denied:'location is blocked in your browser',off:'you look off the route',weak:'weak GPS signal',learn:'learning station positions: check in at each station'}[gpsInfo];
+  return 'Estimated'+(why?' · '+why:trip.g?' · GPS lost '+ago(trip.g.ts):' · waiting for GPS')+' · '+b;
+};
+
 /* ---------- Helpers & state ---------- */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -239,7 +298,7 @@ const hue=n=>{let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return `hs
 const ld=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 
-let S=Object.assign({uid:null,name:'',room:'',line:'r7',dir:'up',pm:'at',mapLine:'r7',chatRead:Date.now()},ld('metroSync')||{});
+let S=Object.assign({uid:null,name:'',room:'',line:'r7',dir:'up',pm:'at',gps:false,mapLine:'r7',chatRead:Date.now()},ld('metroSync')||{});
 if(!S.uid){const o=ld('metroMates')||{};S.uid=o.uid||'u'+Math.random().toString(36).slice(2,10);if(!S.name){S.name=o.name||'';S.room=o.room||''}}  // migrate from old app
 let trip=ld('metroSyncTrip');
 if(trip&&Date.now()-trip.ts>STALE_MIN*60000)trip=null;
@@ -248,19 +307,21 @@ let users={},db=null,ref=null,view='ride',markers={},tickN=0,mapScrolled=false,l
 const persist=()=>{sv('metroSync',S);sv('metroSyncTrip',trip)};
 
 /* ---------- Live position estimate (dead reckoning from schedule) ---------- */
-function live(u,now=Date.now()){
+function live(u,now=Date.now()){const r=liveCore(u,now),g=gpsOf(u);r.src=g&&now-g.ts<GPS_FRESH?'gps':'est';return r}
+function liveCore(u,now){
   const l=LINES[u.line],c=l.cum,n=c.length,tot=c[n-1],sg=u.dir==='up'?1:-1;
-  const el=(now-u.ts)/60000,dw=u.mode==='next'?0:DWELL;
-  let m=c[u.idx]-(u.mode==='next'?sg*0.6:0)+sg*Math.max(0,el-dw);
+  const g=gpsOf(u),el=(now-(g?g.ts:u.ts))/60000,dw=g||u.mode==='next'?0:DWELL;
+  let m=(g?g.m:c[u.idx]-(u.mode==='next'?sg*0.6:0))+sg*Math.max(0,el-dw);
   m=Math.min(tot,Math.max(0,m));
   if(sg>0?m>=tot:m<=0){const i=sg>0?n-1:0;return{f:i,at:true,term:true,idx:i,m}}
-  if(u.mode!=='next'&&el<dw)return{f:u.idx,at:true,idx:u.idx,m};
+  if(!g&&u.mode!=='next'&&el<dw)return{f:u.idx,at:true,idx:u.idx,m};
   let i=0;while(i<n-2&&c[i+1]<=m)i++;
   return{m,f:i+(m-c[i])/(c[i+1]-c[i]),prev:sg>0?i:i+1,next:sg>0?i+1:i,secs:(sg>0?c[i+1]-m:m-c[i])*60};
 }
 const liveText=(u,li)=>{const s=LINES[u.line].stations;return li.term?'Reached '+s[li.idx]:li.at?'At '+s[li.idx]:s[li.prev]+' → '+s[li.next]};
 const eta=s=>s<15?'Arriving':`~${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-const originTime=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*hwAt(u.line,u.ts)*60000;
+const originTime=u=>{const g=gpsOf(u),c=LINES[u.line].cum;return g?g.ts-(u.dir==='up'?g.m:c.at(-1)-g.m)*60000:legacyOrigin(u)};
+const legacyOrigin=u=>u.ts-(u.dir==='up'?LINES[u.line].cum[u.idx]:LINES[u.line].cum.at(-1)-LINES[u.line].cum[u.idx])*60000-(u.offset||0)*hwAt(u.line,u.ts)*60000;
 function compare(t,mt){
   if(!trip)return['Start a trip to compare','#262e3b','#8a95a8'];
   if(t.line!==trip.line||t.dir!==trip.dir)return[t.line!==trip.line?'Other line':'Opposite way','#262e3b','#8a95a8'];
@@ -276,7 +337,7 @@ function status(t,c){$('sdot').style.background=c;$('sdot').title=t;const w=$('w
 const roomPath=()=>'rooms/'+S.room.toLowerCase().replace(/[^a-z0-9_-]/g,'');
 function connect(){
   try{ref&&ref.off&&ref.off();db&&db.ref('.info/connected').off()}catch(e){}
-  users={};ref=null;try{cref&&cref.off()}catch(e){}cref=null;lck=null;chat=[];if(!S.room){render();renderChat();return}
+  users={};geoRoom={};ref=null;try{gref&&gref.off()}catch(e){}gref=null;try{cref&&cref.off()}catch(e){}cref=null;lck=null;chat=[];if(!S.room){render();renderChat();return}
   if(fbReady){
     try{
       if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
@@ -284,10 +345,11 @@ function connect(){
       ref.on('value',s=>{users=s.val()||{};render()},()=>status('Permission denied','#ef4444'));
       db.ref('.info/connected').on('value',s=>status(s.val()?'Live':'Reconnecting','#'+(s.val()?'22c55e':'facc15')));
       cref=db.ref(roomPath()+'/chat').limitToLast(100);cref.on('child_added',x=>addMsg({k:x.key,...x.val()}));
+      gref=db.ref(roomPath()+'/geo');gref.on('value',x=>{geoRoom=x.val()||{}});
     }catch(e){status('Config error','#ef4444')}
   }else{
     const key='ms_local_'+roomPath(),rd=()=>{users=ld(key)||{};render()};
-    ref={off(){removeEventListener('storage',rd)},key};addEventListener('storage',rd);rd();status('Local only','#8a95a8');
+    ref={off(){removeEventListener('storage',rd)},key};addEventListener('storage',rd);rd();status('Local only','#8a95a8');geoRoom=ld('ms_geo_'+roomPath())||{};
     lck='ms_chat_'+roomPath();const rc=()=>{chat=ld(lck)||[];renderChat()};addEventListener('storage',rc);rc();
   }
 }
@@ -319,7 +381,7 @@ function renderHero(){
    <div class="text-sm mut mt-2">${esc(sub)}</div>
    <div class="rail"><i style="left:${pct}%"></i></div>
    <div class="flex justify-between text-xs mut"><span>${esc(st[0])}</span><span>${esc(st.at(-1))}</span></div>
-   <div class="text-xs mut mt-3">Checked in ${fmtT(trip.ts)}${trip.offset?` · shift ${trip.offset>0?'+':''}${trip.offset} train`:''} · estimated</div>`;
+   <div class="text-xs mut mt-3">Checked in ${fmtT(trip.ts)}${trip.offset?` · shift ${trip.offset>0?'+':''}${trip.offset} train`:''} · ${gpsLine(li)}</div>`;
 }
 function renderFriends(){
   const rs=riders(),all=Object.values(users).filter(u=>u&&u.v===2);
@@ -336,7 +398,7 @@ function renderFriends(){
     if(!me&&mt&&t!==mt&&t.line===mt.line&&t.dir===mt.dir){const d=li.f-mt.li.f,k=Math.round(Math.abs(d));if(k>0)apart=`<div class="text-xs mut mt-1 text-right">≈${k} stop${k>1?'s':''} ${d*(u.dir==='up'?1:-1)>0?'ahead':'behind'}</div>`}
     return `<div class="card"><div class="fr"><div class="av" style="background:${hue(u.name)}">${esc(u.name[0]||'?').toUpperCase()}</div>
      <div class="min-w-0 flex-1"><div class="font-bold">${esc(u.name)}${others.length?` <span class="mut text-xs font-normal">· with ${esc(others.join(', '))}</span>`:''}</div><div class="d font-extrabold text-lg leading-tight">${esc(liveText(t.lead.u,li))}</div>
-     <div class="text-xs mut mt-1 truncate" style="color:${l.color}">${esc(l.name)} → ${esc(dirName(u.line,u.dir))} <span class="mut">· ${ago(u.ts)}</span></div></div>
+     <div class="text-xs mut mt-1 truncate" style="color:${l.color}">${esc(l.name)} → ${esc(dirName(u.line,u.dir))} <span class="mut">· ${ago(u.ts)}${li.src==='gps'?' · GPS':' · est.'}</span></div></div>
      <div><span class="badge" style="background:${bg};color:${fg}">${esc(txt)}</span>${apart}</div></div><div class="px-4 pb-4">${etaBar(u,li)}</div></div>`;
   }).join('');
 }
@@ -398,7 +460,7 @@ function trains(rs,now){
     });
   }));
   return out.map(g=>{
-    const lead=g.m.reduce((p,c)=>c.u.ts>p.u.ts?c:p);          // freshest check-in = best position fix
+    const lead=g.m.reduce((p,c)=>(gpsOf(c.u)||c.u).ts>(gpsOf(p.u)||p.u).ts?c:p);          // freshest check-in = best position fix
     return{m:g.m,lead,avg:g.avg,line:lead.u.line,dir:lead.u.dir,li:live(lead.u,now),key:lead.u.line+lead.u.dir+'|'+g.m.map(x=>x.id).sort().join(',')};
   });
 }
@@ -420,11 +482,11 @@ function updateMarkers(){
     el.style.top=(t.li.f*ROW+ROW/2-17)+'px';seen[t.key]=1;
   });
   for(const k in markers)if(!seen[k]){markers[k].remove();delete markers[k]}
-  $('legend').innerHTML=ts.length?ts.map(t=>`<span class="pill" style="text-transform:none;letter-spacing:0;font-size:.78rem">${t.m.map(x=>`<i style="width:10px;height:10px;border-radius:9px;background:${hue(x.u.name)}"></i>`).join('')}${esc(t.m.map(nm).join(' + '))} · ${esc(liveText(t.lead.u,t.li))}</span>`).join(''):'<span class="text-sm mut">No one is riding this line right now.</span>';
+  $('legend').innerHTML=ts.length?ts.map(t=>`<span class="pill" style="text-transform:none;letter-spacing:0;font-size:.78rem">${t.m.map(x=>`<i style="width:10px;height:10px;border-radius:9px;background:${hue(x.u.name)}"></i>`).join('')}${esc(t.m.map(nm).join(' + '))} · ${esc(liveText(t.lead.u,t.li))}${t.li.src==='gps'?' · GPS':''}</span>`).join(''):'<span class="text-sm mut">No one is riding this line right now.</span>';
   const mine=ts.find(t=>t.m.some(x=>x.id===S.uid));
   if(view==='map'&&!mapScrolled&&mine&&markers[mine.key]){mapScrolled=true;markers[mine.key].scrollIntoView({block:'center'})}
 }
-setInterval(()=>{tickN++;if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends();if(tickN%30===0)renderSvc()},1000);
+setInterval(()=>{tickN++;if(trip&&S.gps)startGps();else stopGps();if(trip){renderHero();renderEta()}updateMarkers();if(tickN%5===0)renderFriends();if(tickN%30===0)renderSvc()},1000);
 
 /* ---------- Tabs, sheets, toast ---------- */
 function show(v){view=v;$('composer').classList.toggle('on',v==='chat');['ride','map','friends','chat'].forEach(k=>$('v-'+k).classList.toggle('hidden',k!==v));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='map')mapScrolled=false,updateMarkers();if(v==='chat'){forceScroll=true;renderChat()}else scrollTo(0,0)}
@@ -447,11 +509,11 @@ function openBoard(){
     $('shB').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{bd=b.dataset.d;draw()});
     $('shB').querySelectorAll('.st').forEach(b=>b.onclick=()=>{
       S.line=bl;S.dir=bd;S.mapLine=bl;trip={line:bl,dir:bd,idx:+b.dataset.i,from:+b.dataset.i,dest:null,ts:Date.now(),offset:0,mode:'at'};
-      persist();push();closeSheet();vib();render();toast('Checked in at '+LINES[bl].stations[+b.dataset.i]+' · '+fmtT(trip.ts));mapScrolled=false;
+      learn();if(S.gps)startGps();persist();push();closeSheet();vib();render();toast('Checked in at '+LINES[bl].stations[+b.dataset.i]+' · '+fmtT(trip.ts));mapScrolled=false;
     });
   };draw();
 }
-function setPos(i,mode){trip.idx=i;trip.mode=mode;trip.ts=Date.now();persist();push();closeSheet();vib();render();toast((mode==='next'?'Coming up: ':'Now at ')+LINES[trip.line].stations[i])}
+function setPos(i,mode){trip.idx=i;trip.mode=mode;trip.ts=Date.now();learn();persist();push();closeSheet();vib();render();toast((mode==='next'?'Coming up: ':'Now at ')+LINES[trip.line].stations[i])}
 $('bBoard').onclick=openBoard;
 $('bNext').onclick=()=>{
   if(!trip)return openBoard();
