@@ -1,6 +1,6 @@
 /* MetroSync service worker: lets the app install and open offline.
    Bump V when you want every phone to drop its old cache. */
-const V = 'metrosync-v1';
+const V = 'metrosync-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 const CDN = ['cdn.tailwindcss.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
